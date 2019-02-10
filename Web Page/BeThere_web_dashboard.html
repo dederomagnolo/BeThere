@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+
+<head>
+    <title>BeThere - Dashboard</title>
+    
+    
+    <meta charset="utf-8">
+    <!--<link rel="icon" href="favicon.png">-->
+    <link rel="stylesheet" href="reset.css">
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Open+Sans+Condensed:700">
+    
+
+    <!--menu-->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="style.css">
+    
+</head>
+
+<body>
+    
+    <main>
+    
+    <div class="container">
+        <h1>Dashboard</h1>
+
+        <p>Local Station:</p>
+        <p>Luminosity:</p>
+        <p>Soil Moisture:</p>
+        <p>Temperature:</p>
+        <p>Soil Status:</p>
+    </div>  
+        
+        
+    </main>
+    
+    <div class="logo-imagem">
+        <img src="teste2.png" alt="logo - Be There" border="2" style="width:203px;height:128px;">
+    </div>
+    
+    
+    <nav class="menu-navigation-dark">
+            
+            <a href="#dashboard"><i class="fa fa-th-list"></i><span>Dashboard</span></a>
+            <a href="#charts"><i class="fa fa-bar-chart"></i><span>Charts</span></a>
+            <a href="#books" class="selected"><i class="fa fa-book"></i><span>My Books</span></a>
+            <a href="#settings"><i class="fa fa-gear"></i><span>Settings</span></a>
+            
+    </nav>
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="jquery.slicknav.min.js"></script>
+
+    <script>
+
+        $(function(){
+
+            var menu = $('.menu-navigation-dark');
+
+            menu.slicknav();
+
+            // Mark the clicked item as selected
+
+            menu.on('click', 'a', function(){
+                var a = $(this);
+
+                a.siblings().removeClass('selected');
+                a.addClass('selected');
+            });
+        });
+
+    </script>
+    
+    <!--barra desativada
+    <aside class="barra-principal">
+        
+        <ul class="menu-options">
+            <li><a href="#">Dashboard</a></li>
+            <li><a href="#">Book</a></li>
+            <li><a href="#">Graphs</a></li>
+            <li><a href="#">Options</a></li>
+            <li><a href="#">Help</a></li>
+        </ul>
+        
+    </aside>
+    -->
+    <footer class="rodape-pagina">
+        <!--&copy; Be There-->
+        
+        <!--Menu Inferior-->
+        
+    </footer>
+    
+</body>
