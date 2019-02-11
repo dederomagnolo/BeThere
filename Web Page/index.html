@@ -34,6 +34,15 @@
                 <p>Soil Moisture:</p>
                 <p>Temperature:</p>
                 <p>Soil Status:</p>
+                
+                <aside class="weather-box">
+                    <a class="weatherwidget-io" href="https://forecast7.com/en/n22d01n47d89/sao-carlos/" data-label_1="SÃO CARLOS" data-label_2="WEATHER" data-theme="gray" >SÃO CARLOS WEATHER</a>
+                <script>
+                !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='https://weatherwidget.io/js/widget.min.js';fjs.parentNode.insertBefore(js,fjs);}}(document,'script','weatherwidget-io-js');
+                </script>
+                
+                </aside>
+                
 
             </div>
         
@@ -46,6 +55,37 @@
                  <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&title=Umidade+do+Solo&type=line&xaxis=Hora&yaxis=Umidade+do+Solo+%28%25%29"></iframe>
                 </div>
         </div>
+        
+        <div id="books">
+            
+            <h1>My Books</h1>
+            
+            <div class="container">
+                
+                <p>testing</p>
+            
+            </div>
+        
+        </div>
+        
+        
+        <div id="settings">
+            
+            <h1>Settings</h1>
+            
+            <div class="container sensors">
+            <h2>Sensors</h2>
+            <p>Luminosity: <button>ON</button> <button>OFF</button></p>
+            <p>Moisture: <button>ON</button> <button>OFF</button></p>
+            <p>Temperature: <button>ON</button> <button>OFF</button></p>
+            </div>
+
+            <div class="container sensors">
+                <h2>Pump</h2><button>ON</button> <button>OFF</button>
+            </div>
+            
+        </div>
+            
         
     </main>
     
@@ -63,11 +103,10 @@
     
     <nav class="menu-navigation-dark">
             
-
-            <a href="#dashboard" onclick="mostrar('dashboard');ocultar('charts');"><i class="fa fa-th-list"></i><span>Dashboard</span></a>
-            <a href="#charts" onclick="mostrar('charts');ocultar('dashboard');"><i class="fa fa-bar-chart"></i><span>Charts</span></a>
-            <a href="#books" class="selected"><i class="fa fa-book"></i><span>My Books</span></a>
-            <a href="#settings"><i class="fa fa-gear"></i><span>Settings</span></a>
+            <a href="#dashboard" class="selected" onclick="mostrar('dashboard');ocultar('charts');ocultar('books');ocultar('settings');"><i class="fa fa-th-list"></i><span>Dashboard</span></a>
+            <a href="#charts" onclick="mostrar('charts');ocultar('dashboard');ocultar('books');ocultar('settings');"><i class="fa fa-bar-chart"></i><span>Charts</span></a>
+            <a href="#books" onclick="mostrar('books');ocultar('charts');ocultar('dashboard');ocultar('settings');" ><i class="fa fa-book"></i><span>My Books</span></a>
+            <a href="#settings" onclick="mostrar('settings');ocultar('dashboard');ocultar('books');ocultar('charts');"><i class="fa fa-gear"></i><span>Settings</span></a>
             
         </nav>
         

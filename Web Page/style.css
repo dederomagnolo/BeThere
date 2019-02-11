@@ -46,6 +46,19 @@ aside{
     width: 1000px;
 }
 
+#charts{
+    display: none;
+}
+
+#settings{
+    display: none;
+}
+
+#books{
+    display: none;
+}
+
+
 .graph1{
     padding: 50px;
     position: absolute;
@@ -63,6 +76,7 @@ h1 {
     text-align: center;
     padding: 40px;
 	border-bottom: 2px solid black;
+
 }
 
 h2{
@@ -102,6 +116,17 @@ em{
     left: 0;
 }
 
+.weather-box{
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 344px;
+    border: 1px;
+}
+
+.sensors{
+    margin-top: 10px;
+}
 .menu-navigation-dark a {
     display: block;
     color: #ffffff;
