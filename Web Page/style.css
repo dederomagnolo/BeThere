@@ -124,6 +124,9 @@ em{
     border: 1px;
 }
 
+.sensors{
+    margin-top: 10px;
+}
 .menu-navigation-dark a {
     display: block;
     color: #ffffff;
