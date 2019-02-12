@@ -1,6 +1,7 @@
 #include "ThingSpeak.h"
 #include <SPI.h>
 #include <Ethernet.h>
+#include "HttpClient.h"
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 EthernetClient client;
@@ -19,13 +20,16 @@ int umidade;
 int luminosidade;
 String nivelUmidade;
 
-//Dados do canal de exibição
+//ThingSpeak Settings
+//Upload Channel
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
-//Dados do canal de envio de comando
+//Command Channel
 unsigned long myCommandsChannelNumber = 700837;
 const char * myWriteAPIKey_commands = "ETM0ZP31XHIGLK1T";
+
+String thingSpeakAPI = "api.thingspeak.com";
 
 void setup() {
   
@@ -49,10 +53,14 @@ void setup() {
 
 void loop() {
 
-  //leitura da umidade
+  //Check Talkback
+  checkTalkBack();
+  
+
+  //Reading moisture
   umidade = analogRead(sensor);
 
-  //classificação do solo
+  //Soil status
   if (umidade >= 200 && umidade <=500){
     
     nivelUmidade = "Úmido";
@@ -94,7 +102,7 @@ void loop() {
   luminosidade = analogRead(luz);
   luminosidade = map(luminosidade, 0, 1024, 0, 100);
 
-  //plot no serial monitor
+  //writing the readed sensors on serial monitor
   Serial.print("\numidade: ");
   Serial.print(umidade);
   Serial.print("%");
@@ -112,4 +120,36 @@ void loop() {
   //delay de 20
   delay(2000); // ThingSpeak precisa de pelo menos 15s de intervalo
 
+}
+
+void checkTalkBack()
+{
+  HttpClient client;
+  
+  String talkBackCommand;
+  char charIn;
+  String talkBackURL =  "http://" + thingSpeakAPI + "/talkbacks/" + talkBackID + "/commands/execute?api_key=" + talkBackAPIKey;
+  
+  // Make a HTTP GET request to the TalkBack API:
+  client.get(talkBackURL);
+    
+  while (client.available()) {
+    charIn = client.read();
+    talkBackCommand += charIn;
+  }
+  
+  // Turn On/Off the On-board LED
+  if (talkBackCommand == "TURN_ON")
+  {  
+    Serial.println(talkBackCommand);
+    digitalWrite(13, HIGH);
+  }
+  else if (talkBackCommand == "TURN_OFF")
+  {      
+    Serial.println(talkBackCommand);
+    digitalWrite(13, LOW);
+  }
+  
+  Serial.flush(); 
+  delay(1000);
 }
