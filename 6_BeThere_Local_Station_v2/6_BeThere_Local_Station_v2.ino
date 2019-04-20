@@ -1,10 +1,10 @@
 #include "ThingSpeak.h"
 #include <SPI.h>
 #include <Ethernet.h>
+#include "DHT.h" //DHT Library
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 EthernetClient client;
-//IPAddress 192.168.0.15;
 
 //Atribuição dos pinos
 #define sensor A0
@@ -14,25 +14,25 @@ EthernetClient client;
 #define ledVermelho 10
 #define luz A1
 
+//Configuração do DHT
+#define pinDHT 2     //DHT communication pin
+#define typeDHT DHT22 //DHT sensor type, in this case DHT22
+
+DHT dht(pinDHT, typeDHT); //declaring an DHT object
+
 //variáveis para gravação
 int umidade;
 int luminosidade;
 String nivelUmidade;
 
-//ThingSpeak Settings
-//Upload Channel
+//Campos do ThingSpeak
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
-
-//Command Channel
-unsigned long myCommandsChannelNumber = 700837;
-const char * myWriteAPIKey_commands = "ETM0ZP31XHIGLK1T";
-
-String thingSpeakAPI = "api.thingspeak.com";
 
 void setup() {
   
   Serial.begin(9600);
+  dht.begin(); //initialize DHT object
   Ethernet.begin(mac);
   ThingSpeak.begin(client);
   
@@ -46,20 +46,24 @@ void setup() {
   pinMode(ledAmarelo, OUTPUT);
   pinMode(ledVermelho, OUTPUT);
 
-  //Estado inicial do pino digital da bomba
   digitalWrite(bomba, HIGH);
 }
 
 void loop() {
 
-  //Check Talkback
-  checkTalkBack();
-  
-
-  //Reading moisture
+  //leitura da umidade
   umidade = analogRead(sensor);
 
-  //Soil status
+  //read humidity and temperature
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  //sensor DHT read failure check
+  if (isnan(h) || isnan(t)) {
+    Serial.print("DHT failed");
+  }
+  
+  //classificação do solo
   if (umidade >= 200 && umidade <=500){
     
     nivelUmidade = "Úmido";
@@ -101,58 +105,28 @@ void loop() {
   luminosidade = analogRead(luz);
   luminosidade = map(luminosidade, 0, 1024, 0, 100);
 
-  //writing the readed sensors on serial monitor
-  Serial.print("\numidade: ");
+  //plot no serial monitor
+  Serial.print("\nUmidade do solo: ");
   Serial.print(umidade);
   Serial.print("%");
-  Serial.print("\nluminosidade: ");
+  Serial.print("\nLuminosidade: ");
   Serial.print(luminosidade);
   Serial.print("%");
   Serial.print("\n");
   Serial.print(nivelUmidade);
 
+  //DHT posts
+  Serial.print("\nHumidity: ");
+  Serial.print(h);
+  Serial.print("%\n");
+  Serial.print("Temperature: ");
+  Serial.print(t);
+  Serial.print("°C\n");
+
   //escrever no field 1 - ThingSpeak
   ThingSpeak.writeField(myChannelNumber, 1, umidade, myWriteAPIKey);
-
-  checkTalkBack();
   
   //delay de 20
-  delay(15000); // ThingSpeak precisa de pelo menos 15s de intervalo
+  delay(2000); // ThingSpeak precisa de pelo menos 15s de intervalo
 
-}
-
-void checkTalkBack()
-{ 
-  EthernetClient client;
-  
-  String thingSpeakAPI = "api.thingspeak.com";
-  String talkBackID = "30938";
-  String talkBackAPIKey = "ETM0ZP31XHIGLK1T";
-  
-  String talkBackCommand;
-  char charIn;
-  String talkBackURL =  "GET https://" + thingSpeakAPI + "/talkbacks/" + talkBackID + "/commands/execute?api_key=" + talkBackAPIKey;
-  
-  // Make a HTTP GET request to the TalkBack API:
-  client.connect(talkBackURL, 80)
-    
-  while (client.available()) {
-    charIn = client.read();
-    talkBackCommand += charIn;
-  }
-  
-  // Turn On/Off the On-board LED
-  if (talkBackCommand == "PUMP_ON")
-  {  
-    Serial.println(talkBackCommand);
-    digitalWrite(3, HIGH);
-  }
-  else if (talkBackCommand == "PUMP_OFF")
-  {      
-    Serial.println(talkBackCommand);
-    digitalWrite(3, LOW);
-  }
-  
-  Serial.flush(); 
-  delay(1000);
 }
