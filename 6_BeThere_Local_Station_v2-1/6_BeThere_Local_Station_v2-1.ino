@@ -28,6 +28,11 @@ int luminosidade;
 String nivelUmidade;
 int codSoil;
 
+//variáveis do autoButton
+volatile int funcaoa = 0; // valor instantaneo enviado pelo botão
+volatile int funcaob = 0; // valor guardado
+volatile int estado = 0; // guarda o valor 0 ou 1 do autoButton (HIGH ou LOW)
+
 //Campos do ThingSpeak
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
@@ -51,7 +56,13 @@ void setup() {
   pinMode(ledVermelho, OUTPUT);
 
   //digitalWrite(bomba, HIGH);
+
+  //auto mode setup
+  pinMode(autoButton, INPUT);
+  pinMode(autoLed, OUTPUT);
   
+  attachInterrupt(0, autoSet, CHANGE);
+
   Serial.print("------------ BE THERE - ONLINE ------------");
 }
 
@@ -162,11 +173,29 @@ void loop() {
     } else{
         Serial.print("Error: " + String(x));
     }
-
-    Serial.print("\n");
+  
   
 
   //delay de 20
   delay(20000); // ThingSpeak precisa de pelo menos 15s de intervalo
 
+}
+
+void autoSet(){
+   
+   Serial.println("\nAuto Set Changed");
+   funcaoa=digitalRead(autoButton); // ler o valor enviado pelo botão: "HIGH" ou "LOW"
+   if ((funcaoa == HIGH) && (funcaob == LOW)) {
+   estado = 1 - estado;
+   delay(500); // Tempo apertando o botão, se fica pouco de mais a o led fica piscando rapidamente, não é aconselhavel deixar menos que 500
+   }
+   funcaob=funcaoa;
+
+   if (estado == 1) {
+   digitalWrite(autoLed, HIGH); // liga o led
+   } else {
+   digitalWrite(autoLed, LOW); // desliga o led;
+   }
+
+   delay(500);
 }
