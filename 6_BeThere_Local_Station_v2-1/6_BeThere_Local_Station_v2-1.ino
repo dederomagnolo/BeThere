@@ -9,13 +9,15 @@ EthernetClient client;
 //Atribuição dos pinos
 #define sensor A0
 #define bomba 1
-#define ledVerde 2
-#define ledAmarelo 3
-#define ledVermelho 4
+#define ledVerde 4
+#define ledAmarelo 5
+#define ledVermelho 6
 #define luz A1
+#define autoButton 2
+#define autoLed 3
 
 //Configuração do DHT
-#define pinDHT 5     //DHT communication pin
+#define pinDHT 7     //DHT communication pin
 #define typeDHT DHT22 //DHT sensor type, in this case DHT22
 
 DHT dht(pinDHT, typeDHT); //declaring an DHT object
@@ -24,6 +26,12 @@ DHT dht(pinDHT, typeDHT); //declaring an DHT object
 int umidade;
 int luminosidade;
 String nivelUmidade;
+int codSoil;
+
+//variáveis do autoButton
+volatile int funcaoa = 0; // valor instantaneo enviado pelo botão
+volatile int funcaob = 0; // valor guardado
+volatile int estado = 0; // guarda o valor 0 ou 1 do autoButton (HIGH ou LOW)
 
 //Campos do ThingSpeak
 unsigned long myChannelNumber = 695672;
@@ -48,10 +56,26 @@ void setup() {
   pinMode(ledVermelho, OUTPUT);
 
   //digitalWrite(bomba, HIGH);
+
+  //auto mode setup
+  pinMode(autoButton, INPUT);
+  pinMode(autoLed, OUTPUT);
+  
+  attachInterrupt(0, autoSet, CHANGE);
+
+  Serial.print("------------ BE THERE - ONLINE ------------");
 }
 
 void loop() {
 
+   if (estado == 1) {
+   Serial.print("\nAuto Mode: OFF");
+   } else {
+   Serial.print("\nAuto Mode: ON");
+   }
+
+  //#####LEITURAS####
+  
   //leitura da umidade
   umidade = analogRead(sensor);
 
@@ -61,13 +85,14 @@ void loop() {
 
   //sensor DHT read failure check
   if (isnan(h) || isnan(t)) {
-    Serial.print("DHT failed");
+    Serial.print("\n");
+    Serial.print("\nDHT failed! Check Connections!");
   }
   
   //classificação do solo
   if (umidade >= 200 && umidade <=500){
     
-    nivelUmidade = "Úmido";
+    codSoil = 1; //solo úmido
 
     //Acende led verde
     digitalWrite(ledVerde, HIGH);
@@ -77,8 +102,8 @@ void loop() {
   } 
   
   else if (umidade > 500 && umidade < 850){
-    
-    nivelUmidade = "Quase Seco";
+
+    codSoil = 2; //solo parcialmente umido
 
     //Acende led amarelo
     digitalWrite(ledVerde, LOW);
@@ -89,8 +114,8 @@ void loop() {
   
   else if(umidade >= 850 && umidade <= 1024)
   { 
-    
-    nivelUmidade = "Seco";
+
+    codSoil = 3; //solo seco
 
     //Acende led vermelho
     digitalWrite(ledVerde, LOW);
@@ -100,7 +125,6 @@ void loop() {
     if (bomba){
       digitalWrite(bomba, LOW);
     }
-    
   }
 
   //ajustar limites para exibir o valor de 0 - 100 (seco-umido/sem luz-com luz)
@@ -109,18 +133,30 @@ void loop() {
   //leitura da ponta analógica do divisor de tensão com foto resistor
   luminosidade = analogRead(luz);
   luminosidade = map(luminosidade, 0, 1024, 0, 100);
-
+  
   //plot no serial monitor
-  Serial.print("\nUmidade do solo: ");
+  Serial.print("\n------------ BE THERE - REPORT ------------");
+  
+  Serial.print("\n----- Soil Status ----- ");
+  Serial.print("\nSoil Moisture: ");
   Serial.print(umidade);
   Serial.print("%");
-  Serial.print("\nLuminosidade: ");
+
+  if (codSoil == 1){
+    nivelUmidade = "\nMoist Soil";
+  } else if (codSoil == 2){
+      nivelUmidade = "\nPartially Moist Soil";
+  } else{
+      nivelUmidade = "\nDry Soil";  
+  }
+  Serial.print(nivelUmidade);
+  Serial.print("\nLuminosity: ");
   Serial.print(luminosidade);
   Serial.print("%");
   Serial.print("\n");
-  Serial.print(nivelUmidade);
 
   //DHT posts
+  Serial.print("\n----- Weather Status -----");
   Serial.print("\nHumidity: ");
   Serial.print(h);
   Serial.print("%\n");
@@ -140,4 +176,23 @@ void loop() {
   //delay de 20
   delay(20000); // ThingSpeak precisa de pelo menos 15s de intervalo
 
+}
+
+void autoSet(){
+   
+   Serial.println("\nAuto Set Changed");
+   funcaoa=digitalRead(autoButton); // ler o valor enviado pelo botão: "HIGH" ou "LOW"
+   if ((funcaoa == HIGH) && (funcaob == LOW)) {
+   estado = 1 - estado;
+   delay(500); // Tempo apertando o botão, se fica pouco de mais a o led fica piscando rapidamente, não é aconselhavel deixar menos que 500
+   }
+   funcaob=funcaoa;
+
+   if (estado == 1) {
+   digitalWrite(autoLed, HIGH); // liga o led
+   } else {
+   digitalWrite(autoLed, LOW); // desliga o led;
+   }
+
+   delay(500);
 }
