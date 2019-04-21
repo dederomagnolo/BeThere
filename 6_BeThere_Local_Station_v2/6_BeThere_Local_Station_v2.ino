@@ -4,7 +4,7 @@
 #include "DHT.h" //DHT Library
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
-EthernetClient client;
+EthernetClient client; //ethernet client object
 
 //Atribuição dos pinos
 #define sensor A0
