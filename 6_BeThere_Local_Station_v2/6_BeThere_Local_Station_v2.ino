@@ -45,12 +45,14 @@ void setup() {
   pinMode(luz, INPUT); //sensor de luminosidade (conectada ao divisor de tensão com fotoresistor)
   pinMode(bomba, OUTPUT); //acionamento do relé
 
+  digitalWrite(bomba, HIGH); //inicializar desligado
+  
   //Leds indicadores
   pinMode(ledVerde, OUTPUT);
   pinMode(ledAmarelo, OUTPUT);
   pinMode(ledVermelho, OUTPUT);
 
-  digitalWrite(bomba, HIGH); //inicializar desligado
+  
 
   //digitalWrite(bomba, HIGH);
   
@@ -99,7 +101,6 @@ void loop() {
   
   else if(umidade >= 850 && umidade <= 1024)
   { 
-
     codSoil = 3; //solo seco
 
     //Acende led vermelho
