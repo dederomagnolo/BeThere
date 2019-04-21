@@ -8,10 +8,12 @@ EthernetClient client; //ethernet client object
 
 //Atribuição dos pinos
 #define sensor A0
+
 #define bomba 9
 #define ledVerde 8
 #define ledAmarelo 5
 #define ledVermelho 6
+
 #define luz A1
 #define autoButton 2
 #define autoLed 3
@@ -51,9 +53,11 @@ void setup() {
   pinMode(ledVerde, OUTPUT);
   pinMode(ledAmarelo, OUTPUT);
   pinMode(ledVermelho, OUTPUT);
-
+  
+  //Estado inicial do relé
   digitalWrite(bomba, HIGH);
-
+  
+  //indicadores visuais de inicialização
   digitalWrite(ledVerde, HIGH);
   delay(500);
   digitalWrite(ledVerde, LOW);
@@ -122,7 +126,11 @@ void loop() {
     digitalWrite(ledVerde, LOW);
     digitalWrite(ledVermelho, HIGH);
     digitalWrite(ledAmarelo, LOW);
-    digitalWrite(bomba, LOW);
+    
+    if (bomba){
+      digitalWrite(bomba, LOW);
+    }
+    
   }
 
   //ajustar limites para exibir o valor de 0 - 100 (seco-umido/sem luz-com luz)
@@ -163,22 +171,21 @@ void loop() {
   Serial.print("°C\n");
   Serial.print("\n");
 
+  //set fields
+  ThingSpeak.setField(1, umidade);
+  ThingSpeak.setField(2, luminosidade);
+  ThingSpeak.setField(3, h);
+  ThingSpeak.setField(4, t);
+  //write fields
+  int x = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
 
-    //set fields
-    ThingSpeak.setField(1, umidade);
-    ThingSpeak.setField(2, luminosidade);
-    ThingSpeak.setField(3, h);
-    ThingSpeak.setField(4, t);
-    //write fields
-    int x = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
+  if (x == 200){
+    Serial.print("\nOK!");
+  } else{
+      Serial.print("Error: " + String(x));
+  }
 
-    if (x == 200){
-      Serial.print("\nOK!");
-    } else{
-        Serial.print("Error: " + String(x));
-    }
-  
   //delay de 20
-  delay(20000); // ThingSpeak precisa de pelo menos 15s de intervalo
-
+  delay(20000); // ThingSpeak precisa de pelo menos 15s de interval
+  
 }

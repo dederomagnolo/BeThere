@@ -68,6 +68,12 @@ void setup() {
 
 void loop() {
 
+
+   if (estado == 1) {
+   Serial.print("\nAuto Mode: OFF");
+   } else {
+   Serial.print("\nAuto Mode: ON");
+   }
   //#####LEITURAS####
   
   //leitura da umidade
@@ -159,22 +165,20 @@ void loop() {
   Serial.print("°C\n");
   Serial.print("\n");
 
+  //set fields
+  ThingSpeak.setField(1, umidade);
+  ThingSpeak.setField(2, luminosidade);
+  ThingSpeak.setField(3, h);
+  ThingSpeak.setField(4, t);
+  //write fields
+  int x = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
 
-    //set fields
-    ThingSpeak.setField(1, umidade);
-    ThingSpeak.setField(2, luminosidade);
-    ThingSpeak.setField(3, h);
-    ThingSpeak.setField(4, t);
-    //write fields
-    int x = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
+  if (x == 200){
+    Serial.print("\nOK!");
+  } else{
+      Serial.print("Error: " + String(x));
+  }
 
-    if (x == 200){
-      Serial.print("\nOK!");
-    } else{
-        Serial.print("Error: " + String(x));
-    }
-  
-  
 
   //delay de 20
   delay(20000); // ThingSpeak precisa de pelo menos 15s de intervalo
