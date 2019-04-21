@@ -9,7 +9,7 @@ EthernetClient client;
 //Atribuição dos pinos
 #define sensor A0
 #define bomba 1
-#define ledVerde 4
+#define ledVerde 8
 #define ledAmarelo 5
 #define ledVermelho 6
 #define luz A1
@@ -49,6 +49,8 @@ void setup() {
   pinMode(ledVerde, OUTPUT);
   pinMode(ledAmarelo, OUTPUT);
   pinMode(ledVermelho, OUTPUT);
+
+  digitalWrite(bomba, HIGH); //inicializar desligado
 
   //digitalWrite(bomba, HIGH);
   
@@ -104,10 +106,6 @@ void loop() {
     digitalWrite(ledVerde, LOW);
     digitalWrite(ledVermelho, HIGH);
     digitalWrite(ledAmarelo, LOW);
-    
-    if (bomba){
-      digitalWrite(bomba, LOW);
-    }
   }
 
   //ajustar limites para exibir o valor de 0 - 100 (seco-umido/sem luz-com luz)
