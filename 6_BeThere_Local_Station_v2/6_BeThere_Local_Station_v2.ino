@@ -8,7 +8,7 @@ EthernetClient client;
 
 //Atribuição dos pinos
 #define sensor A0
-#define bomba 1
+#define bomba 9
 #define ledVerde 8
 #define ledAmarelo 5
 #define ledVermelho 6
@@ -52,15 +52,30 @@ void setup() {
   pinMode(ledAmarelo, OUTPUT);
   pinMode(ledVermelho, OUTPUT);
 
-  
+  digitalWrite(bomba, HIGH);
 
-  //digitalWrite(bomba, HIGH);
+  digitalWrite(ledVerde, HIGH);
+  delay(500);
+  digitalWrite(ledVerde, LOW);
+  digitalWrite(ledAmarelo, HIGH);
+  delay(500);
+  digitalWrite(ledAmarelo, LOW);
+  digitalWrite(ledVermelho, HIGH);
+  delay(500);
+  digitalWrite(ledVermelho, LOW);
+  delay(500);
+  digitalWrite(ledVerde, HIGH);
+  delay(500);
+  digitalWrite(ledAmarelo, HIGH);
+  delay(500);
+  digitalWrite(ledVermelho, HIGH);
+  delay(650);
   
   Serial.print("------------ BE THERE - ONLINE ------------");
 }
 
 void loop() {
-
+  
   //#####LEITURAS####
   
   //leitura da umidade
@@ -86,7 +101,7 @@ void loop() {
     digitalWrite(ledVermelho, LOW);
     digitalWrite(ledAmarelo, LOW);
     digitalWrite(bomba, HIGH);
-  } 
+  }
   
   else if (umidade > 500 && umidade < 850){
 
@@ -96,10 +111,10 @@ void loop() {
     digitalWrite(ledVerde, LOW);
     digitalWrite(ledVermelho, LOW);
     digitalWrite(ledAmarelo, HIGH); 
-    digitalWrite(bomba, HIGH);
+    //digitalWrite(bomba, HIGH);
   }
   
-  else if(umidade >= 850 && umidade <= 1024)
+  else if(umidade > 850 && umidade <= 1024)
   { 
     codSoil = 3; //solo seco
 
@@ -107,6 +122,7 @@ void loop() {
     digitalWrite(ledVerde, LOW);
     digitalWrite(ledVermelho, HIGH);
     digitalWrite(ledAmarelo, LOW);
+    digitalWrite(bomba, LOW);
   }
 
   //ajustar limites para exibir o valor de 0 - 100 (seco-umido/sem luz-com luz)
@@ -161,10 +177,7 @@ void loop() {
     } else{
         Serial.print("Error: " + String(x));
     }
-
-    Serial.print("\n");
   
-
   //delay de 20
   delay(20000); // ThingSpeak precisa de pelo menos 15s de intervalo
 
