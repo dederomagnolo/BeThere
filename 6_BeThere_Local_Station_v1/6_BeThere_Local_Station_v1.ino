@@ -7,6 +7,7 @@
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 EthernetClient client; //ethernet client object
+// Inicializa o display no endereço 0x27
 
 //Atribuição dos pinos
 #define sensor A0
@@ -35,17 +36,22 @@ int codSoil;
 long stopRead = 0;
 long startPump = 0;
 
-// Inicializa o display no endereço 0x27
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
-
 
 //Campos do ThingSpeak
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
+LiquidCrystal_I2C lcd(0x27,16,2);
+
 void setup() {
   
   Serial.begin(9600);
+
+  // Inicializa o display LCD 16x2
+  lcd.begin (16, 2);
+  lcd.setBacklightPin(3,POSITIVE);
+  lcd.setBacklight(HIGH);
+  
   dht.begin(); //initialize DHT object
   
   Ethernet.begin(mac);
@@ -93,8 +99,9 @@ void setup() {
   digitalWrite(ledVermelho, HIGH);
   digitalWrite(ledAzul, LOW);
   delay(200);
-
+  
   Serial.print("------------ BE THERE - ONLINE ------------");
+
 }
 
 void loop() {
@@ -196,11 +203,6 @@ void loop() {
         nivelUmidade = "\nDry";  
     }
 
-    //lcd.clear();
-    //lcd.setCursor(0,0);
-    //lcd.print("Soil:");
-    //lcd.setCursor(5,0);
-    //lcd.print(nivelUmidade);
     
     Serial.print(nivelUmidade);
     Serial.print("\nLuminosity: ");
@@ -218,6 +220,15 @@ void loop() {
     Serial.print("°C\n");
     Serial.print("\n");
 
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("SM:");
+    lcd.setCursor(3, 0);
+    lcd.print(h);
+    lcd.setCursor(7, 0);
+    lcd.print((char) 37);
+    lcd.print(" ");
+    
     //set fields
     ThingSpeak.setField(1, umidade);
     ThingSpeak.setField(2, luminosidade);
