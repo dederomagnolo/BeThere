@@ -175,7 +175,7 @@ void loop() {
     Serial.print("\n");
 
     Serial.print(bomba);
-    Serial.print(float(bomba));
+    //Serial.print(float(bomba));
 
     /*float value = ThingSpeak.readFloatField(myChannelNumber, 5);
     Serial.println("\nRead thingSpeak channel commands/field 1 last value="+ String(value));
@@ -195,7 +195,7 @@ void loop() {
     ThingSpeak.setField(2, luminosidade);
     ThingSpeak.setField(3, h);
     ThingSpeak.setField(4, t);
-    ThingSpeak.setField(5, bomba);
+    //ThingSpeak.setField(5, bomba);
     
     //write fields
     int x = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);

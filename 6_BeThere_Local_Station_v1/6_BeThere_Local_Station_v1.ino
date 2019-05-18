@@ -15,7 +15,7 @@ EthernetClient client; //ethernet client object
 #define ledVermelho 6
 
 #define luz A1
-#define autoButton 2
+//#define autoButton 2
 #define autoLed 3
 
 //Configuração do DHT
@@ -180,7 +180,7 @@ void loop() {
     ThingSpeak.setField(1, umidade);
     ThingSpeak.setField(2, luminosidade);
     ThingSpeak.setField(3, h);
-    //ThingSpeak.setField(4, t);
+    ThingSpeak.setField(4, t);
     ThingSpeak.setField(5, bombaFlag);
     
     //write fields
