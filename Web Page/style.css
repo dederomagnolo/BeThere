@@ -6,12 +6,11 @@ body{
 
 
 img{
-    position: absolute ;
+    position: absolute;
     top: 0;
     left: 5px;
     background-color: #339999;
     margin: 0;
-    
 }
 
 aside{

@@ -2,17 +2,19 @@
 #include <SPI.h>
 #include <Ethernet.h>
 #include "DHT.h" //DHT Library
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 EthernetClient client; //ethernet client object
 
 //Atribuição dos pinos
 #define sensor A0
-
 #define bomba 9
 #define ledVerde 8
 #define ledAmarelo 5
 #define ledVermelho 6
+#define resetPin 12 
 
 #define luz A1
 //#define autoButton 2
@@ -32,6 +34,10 @@ String nivelUmidade;
 int codSoil;
 long stopRead = 0;
 
+// Inicializa o display no endereço 0x27
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
+
+
 //Campos do ThingSpeak
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
@@ -43,6 +49,8 @@ void setup() {
   
   Ethernet.begin(mac);
   ThingSpeak.begin(client);
+
+  digitalWrite(resetPin, LOW);
   
   //Entradas e saída
   pinMode(sensor, INPUT); //sensor de umidade
@@ -55,9 +63,14 @@ void setup() {
   pinMode(ledVerde, OUTPUT);
   pinMode(ledAmarelo, OUTPUT);
   pinMode(ledVermelho, OUTPUT);
+
+  //Reset Button
+  pinMode(resetPin, OUTPUT);
   
   //Estado inicial do relé
   digitalWrite(bomba, HIGH);
+
+  
   
   //indicadores visuais de inicialização
   digitalWrite(ledVerde, HIGH);
@@ -75,8 +88,8 @@ void setup() {
   digitalWrite(ledAmarelo, HIGH);
   delay(500);
   digitalWrite(ledVermelho, HIGH);
-  delay(650);
-  
+  delay(200);
+
   Serial.print("------------ BE THERE - ONLINE ------------");
 }
 
@@ -142,8 +155,8 @@ void loop() {
     umidade = map(umidade, 0, 1024, 100, 0); 
     
     //leitura da ponta analógica do divisor de tensão com foto resistor
-    luminosidade = analogRead(luz);
-    luminosidade = map(luminosidade, 0, 1024, 0, 100);
+    luminosidade = 100*((analogRead(luz))/1023);
+
     
     //plot no serial monitor
     Serial.print("\n------------ BE THERE - REPORT ------------");
@@ -152,14 +165,22 @@ void loop() {
     Serial.print("\nSoil Moisture: ");
     Serial.print(umidade);
     Serial.print("%");
-  
+    
+    
     if (codSoil == 1){
-      nivelUmidade = "\nMoist Soil";
+      nivelUmidade = "\nMoist";
     } else if (codSoil == 2){
-        nivelUmidade = "\nPartially Moist Soil";
+        nivelUmidade = "\nPartially Moist";
     } else{
-        nivelUmidade = "\nDry Soil";  
+        nivelUmidade = "\nDry";  
     }
+
+    //lcd.clear();
+    //lcd.setCursor(0,0);
+    //lcd.print("Soil:");
+    //lcd.setCursor(5,0);
+    //lcd.print(nivelUmidade);
+    
     Serial.print(nivelUmidade);
     Serial.print("\nLuminosity: ");
     Serial.print(luminosidade);
@@ -195,6 +216,7 @@ void loop() {
     stopRead = millis();
   }
 
+  //digitalWrite(resetPin, LOW);
   //delay de 20
   //delay(20000); // ThingSpeak precisa de pelo menos 15s de interval
   
