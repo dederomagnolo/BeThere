@@ -15,6 +15,7 @@ EthernetClient client; //ethernet client object
 #define ledAmarelo 5
 #define ledVermelho 6
 #define resetPin 12 
+#define ledAzul 14
 
 #define luz A1
 //#define autoButton 2
@@ -29,10 +30,10 @@ DHT dht(pinDHT, typeDHT); //declaring an DHT object
 //variáveis para gravação
 int umidade;
 int luminosidade;
-int bombaFlag;
 String nivelUmidade;
 int codSoil;
 long stopRead = 0;
+long startPump = 0;
 
 // Inicializa o display no endereço 0x27
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
@@ -63,6 +64,7 @@ void setup() {
   pinMode(ledVerde, OUTPUT);
   pinMode(ledAmarelo, OUTPUT);
   pinMode(ledVermelho, OUTPUT);
+  pinMode(ledAzul, OUTPUT);
 
   //Reset Button
   pinMode(resetPin, OUTPUT);
@@ -81,6 +83,7 @@ void setup() {
   digitalWrite(ledAmarelo, LOW);
   digitalWrite(ledVermelho, HIGH);
   delay(500);
+  digitalWrite(ledAzul, HIGH);
   digitalWrite(ledVermelho, LOW);
   delay(500);
   digitalWrite(ledVerde, HIGH);
@@ -88,6 +91,7 @@ void setup() {
   digitalWrite(ledAmarelo, HIGH);
   delay(500);
   digitalWrite(ledVermelho, HIGH);
+  digitalWrite(ledAzul, LOW);
   delay(200);
 
   Serial.print("------------ BE THERE - ONLINE ------------");
@@ -100,7 +104,26 @@ void loop() {
   if(millis()-stopRead > 20000){
       //leitura da umidade
     umidade = analogRead(sensor);
-  
+
+    int bombaFlag = ThingSpeak.readFloatField(myChannelNumber, 5);
+    
+    Serial.print("\nPUMP: ");
+    Serial.print(bombaFlag);
+      
+    if(bombaFlag == 1){
+      Serial.print("\nThe pump is turned on by web app!\n");
+
+      startPump = millis();
+      
+      while(millis()<startPump+20000){
+        digitalWrite(bomba, LOW);  
+      }
+      
+      bombaFlag = 0;
+      digitalWrite(bomba, LOW);
+      Serial.print("\nFinished watering your plants!\n");
+    }
+    
     //read humidity and temperature
     float h = dht.readHumidity();
     float t = dht.readTemperature();
@@ -121,7 +144,6 @@ void loop() {
       digitalWrite(ledVermelho, LOW);
       digitalWrite(ledAmarelo, LOW);
       digitalWrite(bomba, HIGH);
-      bombaFlag = 0;
     }
     
     else if (umidade > 500 && umidade < 850){
@@ -146,7 +168,6 @@ void loop() {
       
       if (bomba){
         digitalWrite(bomba, LOW);
-        bombaFlag = 1;
       }
       
     }
@@ -202,7 +223,7 @@ void loop() {
     ThingSpeak.setField(2, luminosidade);
     ThingSpeak.setField(3, h);
     ThingSpeak.setField(4, t);
-    ThingSpeak.setField(5, bombaFlag);
+    //ThingSpeak.setField(5, bombaFlag);
     
     //write fields
     int x = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);

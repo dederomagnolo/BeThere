@@ -100,11 +100,8 @@
 
             <div class="container sensors">
                 <h2>Pump</h2>
-                <button>OFF</button>
-                
-                <button onclick="pumpON">ON</button>
-                <button type="button" id="D1-on" class="button button1" >D1 ON</button>
-                <button type="button" id="D1-off" class="button button3" >D1 OFF</button>
+                <button type="button" id="pump-on" class="button button1" >ON</button>
+                <button type="button" id="pump-off" class="button button2" >OFF</button>
             </div>
             
         </div>
@@ -167,13 +164,13 @@
         </script>
     
     <script>
-		document.getElementById('D1-on').addEventListener('click', function() {
-				var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field5=2"
+		document.getElementById('pump-on').addEventListener('click', function() {
+				var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field5=1"
 				$.getJSON(url, function(data) {
 					console.log(data);
 				});
 		});
-        document.getElementById('D1-off').addEventListener('click', function() {
+        document.getElementById('pump-off').addEventListener('click', function() {
                 var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field5=0"
                 $.getJSON(url, function(data) {
                     console.log(data);
