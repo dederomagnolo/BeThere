@@ -50,6 +50,7 @@ aside{
     display: none;
 }
 
+
 #settings{
     display: none;
 }
@@ -59,10 +60,30 @@ aside{
 }
 
 
-.graph1{
-    padding: 50px;
+.graph1-moisture{
+    padding: 7px;
     position: absolute;
-    left: 500px;
+    right: 150px;
+}
+
+.graph2-temperature{
+    padding: 7px;
+    position: absolute;
+    right: 600px;
+}
+
+.graph3-umidity{
+    padding: 7px;
+    position: absolute;
+    right: 150px;
+    top: 380px;
+}
+
+.graph4-luminosity{
+    padding: 7px;
+    position: absolute;
+    right: 600px;
+    top: 380px;
 }
 
 h1 {
