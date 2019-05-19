@@ -8,6 +8,7 @@
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 EthernetClient client; //ethernet client object
 // Inicializa o display no endereço 0x27
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE); // (Endereço,en,rw,rs,d4,d5,d6,d7,bl, blpol)
 
 //Atribuição dos pinos
 #define sensor A0
@@ -41,19 +42,16 @@ long startPump = 0;
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
-LiquidCrystal_I2C lcd(0x27,16,2);
-
 void setup() {
   
   Serial.begin(9600);
-
+  
   // Inicializa o display LCD 16x2
-  lcd.begin (16, 2);
-  lcd.setBacklightPin(3,POSITIVE);
-  lcd.setBacklight(HIGH);
   
+  //lcd.setBacklight(HIGH);
+  //delay(2000);
   dht.begin(); //initialize DHT object
-  
+  lcd.begin(16,2);
   Ethernet.begin(mac);
   ThingSpeak.begin(client);
 
@@ -78,8 +76,7 @@ void setup() {
   //Estado inicial do relé
   digitalWrite(bomba, HIGH);
 
-  
-  
+  /* 
   //indicadores visuais de inicialização
   digitalWrite(ledVerde, HIGH);
   delay(500);
@@ -99,6 +96,8 @@ void setup() {
   digitalWrite(ledVermelho, HIGH);
   digitalWrite(ledAzul, LOW);
   delay(200);
+
+  */
   
   Serial.print("------------ BE THERE - ONLINE ------------");
 
@@ -219,7 +218,7 @@ void loop() {
     Serial.print(t);
     Serial.print("°C\n");
     Serial.print("\n");
-
+    /*
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("SM:");
@@ -227,7 +226,7 @@ void loop() {
     lcd.print(h);
     lcd.setCursor(7, 0);
     lcd.print((char) 37);
-    lcd.print(" ");
+    lcd.print(" ");*/
     
     //set fields
     ThingSpeak.setField(1, umidade);
