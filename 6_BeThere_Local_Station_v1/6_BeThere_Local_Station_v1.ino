@@ -3,12 +3,10 @@
 #include <Ethernet.h>
 #include "DHT.h" //DHT Library
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 EthernetClient client; //ethernet client object
 // Inicializa o display no endereço 0x27
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE); // (Endereço,en,rw,rs,d4,d5,d6,d7,bl, blpol)
 
 //Atribuição dos pinos
 #define sensor A0
@@ -43,15 +41,13 @@ unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
 void setup() {
-  
+
   Serial.begin(9600);
   
   // Inicializa o display LCD 16x2
   
-  //lcd.setBacklight(HIGH);
   //delay(2000);
   dht.begin(); //initialize DHT object
-  lcd.begin(16,2);
   Ethernet.begin(mac);
   ThingSpeak.begin(client);
 
@@ -59,7 +55,7 @@ void setup() {
   
   //Entradas e saída
   pinMode(sensor, INPUT); //sensor de umidade
-  pinMode(luz, INPUT); //sensor de luminosidade (conectada ao divisor de tensão com fotoresistor)
+  pinMode(luz, INPUT); //porta conectada ao divisor de tensão com fotoresistor)
   pinMode(bomba, OUTPUT); //acionamento do relé
 
   digitalWrite(bomba, HIGH); //inicializar desligado
@@ -100,7 +96,6 @@ void setup() {
   */
   
   Serial.print("------------ BE THERE - ONLINE ------------");
-
 }
 
 void loop() {
@@ -108,11 +103,16 @@ void loop() {
   //#####LEITURAS####
 
   if(millis()-stopRead > 20000){
-      //leitura da umidade
+    //leitura da umidade
     umidade = analogRead(sensor);
-
-    int bombaFlag = ThingSpeak.readFloatField(myChannelNumber, 5);
+    //leitura da ponta analógica do divisor de tensão com foto resistor
+    luminosidade = analogRead(luz);
+    //luminosidade = map(valorpot, 0, 1023, 0, 255); 
     
+    int bombaFlag = ThingSpeak.readFloatField(myChannelNumber, 5);
+
+
+    //linha de teste
     Serial.print("\nPUMP: ");
     Serial.print(bombaFlag);
       
@@ -122,11 +122,12 @@ void loop() {
       startPump = millis();
       
       while(millis()<startPump+20000){
-        digitalWrite(bomba, LOW);  
+        digitalWrite(bomba, LOW);
+        digitalWrite(ledAzul, HIGH);  
       }
       
       bombaFlag = 0;
-      digitalWrite(bomba, LOW);
+      digitalWrite(ledAzul, LOW);
       Serial.print("\nFinished watering your plants!\n");
     }
     
@@ -149,7 +150,8 @@ void loop() {
       digitalWrite(ledVerde, HIGH);
       digitalWrite(ledVermelho, LOW);
       digitalWrite(ledAmarelo, LOW);
-      digitalWrite(bomba, HIGH);
+      digitalWrite(bomba, HIGH); //desliga bomba
+      digitalWrite(ledAzul, LOW);
     }
     
     else if (umidade > 500 && umidade < 850){
@@ -160,7 +162,8 @@ void loop() {
       digitalWrite(ledVerde, LOW);
       digitalWrite(ledVermelho, LOW);
       digitalWrite(ledAmarelo, HIGH); 
-      //digitalWrite(bomba, HIGH);
+      digitalWrite(bomba, HIGH); //desliga bomba
+      digitalWrite(ledAzul, LOW);
     }
     
     else if(umidade > 850 && umidade <= 1024)
@@ -173,18 +176,15 @@ void loop() {
       digitalWrite(ledAmarelo, LOW);
       
       if (bomba){
-        digitalWrite(bomba, LOW);
+        digitalWrite(bomba, LOW); //liga bomba
+        digitalWrite(ledAzul, HIGH); 
       }
       
     }
   
     //ajustar limites para exibir o valor de 0 - 100 (seco-umido/sem luz-com luz)
-    umidade = map(umidade, 0, 1024, 100, 0); 
-    
-    //leitura da ponta analógica do divisor de tensão com foto resistor
-    luminosidade = 100*((analogRead(luz))/1023);
+    //umidade = map(umidade, 0, 1024, 100, 0); 
 
-    
     //plot no serial monitor
     Serial.print("\n------------ BE THERE - REPORT ------------");
     
@@ -192,8 +192,7 @@ void loop() {
     Serial.print("\nSoil Moisture: ");
     Serial.print(umidade);
     Serial.print("%");
-    
-    
+      
     if (codSoil == 1){
       nivelUmidade = "\nMoist";
     } else if (codSoil == 2){
@@ -201,8 +200,7 @@ void loop() {
     } else{
         nivelUmidade = "\nDry";  
     }
-
-    
+ 
     Serial.print(nivelUmidade);
     Serial.print("\nLuminosity: ");
     Serial.print(luminosidade);
@@ -218,22 +216,13 @@ void loop() {
     Serial.print(t);
     Serial.print("°C\n");
     Serial.print("\n");
-    /*
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("SM:");
-    lcd.setCursor(3, 0);
-    lcd.print(h);
-    lcd.setCursor(7, 0);
-    lcd.print((char) 37);
-    lcd.print(" ");*/
-    
+
     //set fields
     ThingSpeak.setField(1, umidade);
     ThingSpeak.setField(2, luminosidade);
     ThingSpeak.setField(3, h);
     ThingSpeak.setField(4, t);
-    //ThingSpeak.setField(5, bombaFlag);
+    ThingSpeak.setField(5, bombaFlag);
     
     //write fields
     int x = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
@@ -241,12 +230,12 @@ void loop() {
     if (x == 200){
       Serial.print("\nOK!");
     } else{
-        Serial.print("Error: " + String(x));
+        Serial.print("Coneection Error: " + String(x));
     }
 
     stopRead = millis();
   }
-
+  
   //digitalWrite(resetPin, LOW);
   //delay de 20
   //delay(20000); // ThingSpeak precisa de pelo menos 15s de interval
