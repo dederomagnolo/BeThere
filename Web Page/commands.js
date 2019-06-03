@@ -9,6 +9,14 @@ function turnOnPump() {
             {
               api_key: writeKey,
               field5: 1
-            }
-        }
+            },
+            function(){
+                
+            });
+            alert("teste!");
+        });
  }
+
+                          
+                          
+     

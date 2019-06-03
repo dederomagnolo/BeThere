@@ -3,6 +3,7 @@
 #include <Ethernet.h>
 #include "DHT.h" //DHT Library
 #include <Wire.h>
+#include "pitches.h"
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 EthernetClient client; //ethernet client object
@@ -16,6 +17,7 @@ EthernetClient client; //ethernet client object
 #define ledVermelho 6
 #define resetPin 12 
 #define ledAzul 14
+#define bipbip 15
 
 #define luz A1
 //#define autoButton 2
@@ -31,10 +33,22 @@ DHT dht(pinDHT, typeDHT); //declaring an DHT object
 int umidade;
 int luminosidade;
 String nivelUmidade;
+String nivelLuz;
 int codSoil;
 long stopRead = 0;
 long startPump = 0;
 
+//flags
+int bombaFlag = 0;
+int luzFlag;
+
+  int melody[] = {
+  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
+  };
+
+  int noteDurations[] = {
+  4, 8, 8, 4, 4, 4, 4, 4
+  };
 
 //Campos do ThingSpeak
 unsigned long myChannelNumber = 695672;
@@ -43,34 +57,47 @@ const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 void setup() {
 
   Serial.begin(9600);
-  
-  // Inicializa o display LCD 16x2
-  
-  //delay(2000);
   dht.begin(); //initialize DHT object
   Ethernet.begin(mac);
   ThingSpeak.begin(client);
-
-  digitalWrite(resetPin, LOW);
   
-  //Entradas e saída
+  //Entradas e saídas
+
+  //portas analógicas e relé
   pinMode(sensor, INPUT); //sensor de umidade
   pinMode(luz, INPUT); //porta conectada ao divisor de tensão com fotoresistor)
   pinMode(bomba, OUTPUT); //acionamento do relé
-
-  digitalWrite(bomba, HIGH); //inicializar desligado
-  
   //Leds indicadores
   pinMode(ledVerde, OUTPUT);
   pinMode(ledAmarelo, OUTPUT);
   pinMode(ledVermelho, OUTPUT);
-  pinMode(ledAzul, OUTPUT);
-
+  pinMode(ledAzul, OUTPUT); //para indicar bomba ligada
+  //buzzer
+  pinMode(bipbip, OUTPUT);
   //Reset Button
   pinMode(resetPin, OUTPUT);
+
   
-  //Estado inicial do relé
+  //Estados iniciais
   digitalWrite(bomba, HIGH);
+  //digitalWrite(resetPin, LOW);
+
+
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+
+    // to calculate the note duration, take one second divided by the note type.
+    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
+    int noteDuration = 1000 / noteDurations[thisNote];
+    tone(bipbip, melody[thisNote], noteDuration);
+
+    // to distinguish the notes, set a minimum time between them.
+    // the note's duration + 30% seems to work well:
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    // stop the tone playing:
+    noTone(bipbip);
+  }
+  //tone(bipbip, 1000);
 
   /* 
   //indicadores visuais de inicialização
@@ -103,14 +130,28 @@ void loop() {
   //#####LEITURAS####
 
   if(millis()-stopRead > 20000){
+    noTone(bipbip);
     //leitura da umidade
     umidade = analogRead(sensor);
     //leitura da ponta analógica do divisor de tensão com foto resistor
     luminosidade = analogRead(luz);
     //luminosidade = map(valorpot, 0, 1023, 0, 255); 
     
-    int bombaFlag = ThingSpeak.readFloatField(myChannelNumber, 5);
+    bombaFlag = ThingSpeak.readFloatField(myChannelNumber, 5);
 
+    //conferencia da luminosidade
+
+    if(luminosidade > 530){
+      luzFlag = 0; //sem luz
+    }
+
+    else if (luminosidade > 530){
+      luzFlag = 1; //com luz incidente
+    }
+
+    else if (luminosidade > 300 && luminosidade < 530){
+      luzFlag = 2; //luz moderada
+    }
 
     //linha de teste
     Serial.print("\nPUMP: ");
@@ -142,7 +183,7 @@ void loop() {
     }
     
     //classificação do solo
-    if (umidade >= 200 && umidade <=500){
+    if (umidade <= 500){
       
       codSoil = 1; //solo úmido
   
@@ -154,7 +195,7 @@ void loop() {
       digitalWrite(ledAzul, LOW);
     }
     
-    else if (umidade > 500 && umidade < 850){
+    else if (umidade > 500 && umidade < 750){
   
       codSoil = 2; //solo parcialmente umido
   
@@ -166,7 +207,7 @@ void loop() {
       digitalWrite(ledAzul, LOW);
     }
     
-    else if(umidade > 850 && umidade <= 1024)
+    else if(umidade > 750)
     { 
       codSoil = 3; //solo seco
   
@@ -183,9 +224,9 @@ void loop() {
     }
   
     //ajustar limites para exibir o valor de 0 - 100 (seco-umido/sem luz-com luz)
-    //umidade = map(umidade, 0, 1024, 100, 0); 
+    umidade = map(umidade, 0, 1024, 100, 0); 
 
-    //plot no serial monitor
+    //imprimir na serial as leituras
     Serial.print("\n------------ BE THERE - REPORT ------------");
     
     Serial.print("\n----- Soil Status ----- ");
@@ -200,11 +241,21 @@ void loop() {
     } else{
         nivelUmidade = "\nDry";  
     }
- 
-    Serial.print(nivelUmidade);
+
+    if (luzFlag == 1){
+      nivelLuz = "incident light";
+    } else if (luzFlag == 2){
+      nivelLuz = "partial light";
+    } else {
+      nivelLuz = "no light";
+    }
+
+    luminosidade = map(luminosidade, 0, 1023, 0, 100); 
+    
     Serial.print("\nLuminosity: ");
     Serial.print(luminosidade);
-    Serial.print("%");
+    Serial.print("%\n");
+    Serial.print("Your soil is " + nivelUmidade + " and your garden has " + nivelLuz);
     Serial.print("\n");
   
     //DHT posts
@@ -228,7 +279,7 @@ void loop() {
     int x = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
   
     if (x == 200){
-      Serial.print("\nOK!");
+      Serial.print("Data sent with success!");
     } else{
         Serial.print("Coneection Error: " + String(x));
     }

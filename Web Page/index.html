@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <head>
-    <title>BeThere - Dashboard</title>
+    <title>BeThere</title>
     
     
     <meta charset="utf-8">
@@ -68,8 +68,10 @@
                 </div>
             
                 <div class="graph4-luminosity">
+         
 
-                    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/2?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line&update=15"></iframe>
+                    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/2?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&title=Luminosidade&type=line"></iframe>
+
 
                 </div>
         </div>
@@ -167,9 +169,17 @@
         
 		document.getElementById('pump-on').addEventListener('click', function() {
 				var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field5=1"
+                var d = new Date();
+                var n = d.toISOString();       
+                
 				$.getJSON(url, function(data) {
 					console.log(data);
 				});
+
+                $.getJSON("https://api.thingspeak.com/channels/695672/fields/5/last.json?timezone=America/Sao_Paulo" , function(data) {
+                    alert(data["created_at"]);
+                    alert(n);
+                }); 
 		});
         
         document.getElementById('pump-off').addEventListener('click', function() {
