@@ -37,16 +37,16 @@ String nivelLuz;
 int codSoil;
 long stopRead = 0;
 long startPump = 0;
-long startTimer = 0;
-long passedTime = 0;
+unsigned long startTimer = 0UL;
 
 //flags
 int bombaFlag = 0;
 int luzFlag;
-int updateTime = 0;
-int recordedTime = 0;
+long int updateTime = 0;
+long int recordedTime = 0;
 long timerFlag = 0;
-int timerON = 0;
+int timeSet = 0;
+unsigned long totalTempo = 0UL;
 
   int melody[] = {
   NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
@@ -110,27 +110,9 @@ void setup() {
 
 void loop() {
 
-  updateTime = ThingSpeak.readFloatField(mainChannelNumber, 6);
-
-  if(updateTime != recordedTime){ //verifica se ocorreu mudança no status do Timer
-    
-    recordedTime = updateTime; //grava o novo time setado
-
-    if(recordedTime != 0){
-      timerFlag = 1; //timer ligado
-      digitalWrite(timerLed, HIGH);
-      startTimer = millis();
-      Serial.print(startTimer);
-    } else{
-        timerFlag = 0; //timer desligado
-        digitalWrite(timerLed, LOW);
-      }   
-  } //se nao ocorre mudança, o tempo gravado é mantido
-
   if(timerFlag == 1){
-    if(passedTime > (startTimer + recordedTime)){
-        Serial.print("\n");
-        Serial.print(recordedTime);
+    
+    if(totalTempo > recordedTime){
         startPump = millis();
         Serial.print("\nTimer mode: pump on");
         
@@ -138,18 +120,60 @@ void loop() {
             digitalWrite(bomba, LOW);
             digitalWrite(ledAzul, HIGH);
         }
-
         digitalWrite(bomba, HIGH);
         digitalWrite(ledAzul, LOW);
-        Serial.print("\nYour garden has been watered!");
+        Serial.print("\nYour garden has been watered!\n");
         startTimer = millis();
     }
-
   }
 
-  
   if(millis()-stopRead > 20000){
+
+    totalTempo = millis()-startTimer;
+    Serial.print("\nmilis:");
+    Serial.print(millis());
+    Serial.print("\nStart:");
+    Serial.print(startTimer);
+    Serial.print("\n");
+    Serial.print("\nSubtração millis-start:");
+    Serial.print(totalTempo);
     noTone(bipbip);
+    
+    timeSet = ThingSpeak.readFloatField(mainChannelNumber, 6);
+
+    Serial.print("\ntimeset:");
+    Serial.print(timeSet);
+
+    switch (timeSet) {
+    case 0:
+      updateTime = 0;
+      break;
+    case 1:
+      updateTime = 300000;
+      break;
+    case 2:
+      updateTime = 28800000;
+      break;
+    }
+    
+    if(updateTime != recordedTime){ //verifica se ocorreu mudança no status do Timer
+
+      recordedTime = updateTime; //grava o novo time setado
+      Serial.print("\natualiza tempo:");
+      Serial.print(recordedTime);
+      
+      if(recordedTime != 0){
+        timerFlag = 1; //timer ligado
+        digitalWrite(timerLed, HIGH);
+        startTimer = millis(); //timer começa contar
+      } else{
+          timerFlag = 0; //timer desligado
+          digitalWrite(timerLed, LOW);
+        }   
+    } //se nao ocorre mudança, o tempo gravado é mantido
+
+    Serial.print("\ntempo gravado:");
+    Serial.print(recordedTime);
     
     //leitura da umidade
     umidade = analogRead(sensor);
@@ -256,7 +280,7 @@ void loop() {
       Serial.print("\nTimer mode Off");
     } else {
       Serial.print("\nIrrigation Interval:");
-      Serial.print(recordedTime/3600000 + "hours");  
+      Serial.print((recordedTime/60000) + "hours");  
     }
     
     Serial.print("\n----- Soil Status ----- ");
@@ -281,7 +305,7 @@ void loop() {
       nivelLuz = "no light";
     }
 
-    luminosidade = map(luminosidade, 0, 1023, 0, 100); 
+    luminosidade = map(luminosidade, 0, 1023, 100, 0); 
     
     Serial.print("\nLuminosity: ");
     Serial.print(luminosidade);
@@ -317,10 +341,8 @@ void loop() {
     }
 
     stopRead = millis();
-    passedTime = millis();
   }
 
-  Serial.print(passedTime);
   //digitalWrite(resetPin, LOW);
   //delay de 20
   //delay(20000); // ThingSpeak precisa de pelo menos 15s de interval
