@@ -19,6 +19,7 @@ EthernetClient client; //ethernet client object
 #define resetPin 12 
 #define ledAzul 14
 #define bipbip 15
+#define timerLed 16
 //Configuração do DHT
 #define pinDHT 7     //DHT communication pin
 #define typeDHT DHT22 //DHT sensor type, in this case DHT22
@@ -37,12 +38,15 @@ int codSoil;
 long stopRead = 0;
 long startPump = 0;
 long startTimer = 0;
-long stopTimer = 0;
+long passedTime = 0;
 
 //flags
 int bombaFlag = 0;
 int luzFlag;
+int updateTime = 0;
+int recordedTime = 0;
 long timerFlag = 0;
+int timerON = 0;
 
   int melody[] = {
   NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
@@ -53,7 +57,7 @@ long timerFlag = 0;
   };
 
 //Campos do ThingSpeak
-unsigned long myChannelNumber = 695672;
+unsigned long mainChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
 void setup() {
@@ -74,6 +78,7 @@ void setup() {
   pinMode(ledAmarelo, OUTPUT);
   pinMode(ledVermelho, OUTPUT);
   pinMode(ledAzul, OUTPUT); //para indicar bomba ligada
+  pinMode(timerLed, OUTPUT);
   //buzzer
   pinMode(bipbip, OUTPUT);
   //Reset Button
@@ -82,6 +87,7 @@ void setup() {
   //Estados iniciais
   digitalWrite(bomba, HIGH); //bomba desligada
   //digitalWrite(resetPin, LOW);
+  digitalWrite(timerLed, LOW);
 
 
   for (int thisNote = 0; thisNote < 8; thisNote++) {
@@ -99,28 +105,48 @@ void setup() {
     noTone(bipbip);
   }
  
-  Serial.print("------------ BE THERE - ONLINE ------------");
+  Serial.print("------------ BE THERE - ONLINE ------------\n");
 }
 
 void loop() {
 
-  timerFlag = ThingSpeak.readFloatField(myChannelNumber, 6);
-  
-  if(timerFlag != 0){
-    if(millis()-stopTimer > timerFlag){
+  updateTime = ThingSpeak.readFloatField(mainChannelNumber, 6);
 
-    startPump = millis();
-    Serial.print("\nTimer mode: pump on");
+  if(updateTime != recordedTime){ //verifica se ocorreu mudança no status do Timer
     
-    while(millis()<startPump+20000){
-        digitalWrite(bomba, LOW);
-        digitalWrite(ledAzul, HIGH);
-      }
+    recordedTime = updateTime; //grava o novo time setado
 
-    Serial.print("\nYour garden has been irrigated!");
-    stopTimer = millis();
+    if(recordedTime != 0){
+      timerFlag = 1; //timer ligado
+      digitalWrite(timerLed, HIGH);
+      startTimer = millis();
+      Serial.print(startTimer);
+    } else{
+        timerFlag = 0; //timer desligado
+        digitalWrite(timerLed, LOW);
+      }   
+  } //se nao ocorre mudança, o tempo gravado é mantido
+
+  if(timerFlag == 1){
+    if(passedTime > (startTimer + recordedTime)){
+        Serial.print("\n");
+        Serial.print(recordedTime);
+        startPump = millis();
+        Serial.print("\nTimer mode: pump on");
+        
+        while(millis()<startPump+20000){
+            digitalWrite(bomba, LOW);
+            digitalWrite(ledAzul, HIGH);
+        }
+
+        digitalWrite(bomba, HIGH);
+        digitalWrite(ledAzul, LOW);
+        Serial.print("\nYour garden has been watered!");
+        startTimer = millis();
     }
+
   }
+
   
   if(millis()-stopRead > 20000){
     noTone(bipbip);
@@ -129,10 +155,9 @@ void loop() {
     umidade = analogRead(sensor);
     //leitura da ponta analógica do divisor de tensão com foto resistor
     luminosidade = analogRead(luz);
-    //luminosidade = map(valorpot, 0, 1023, 0, 255); 
 
     //check do status da bomba no ThingSpeak
-    bombaFlag = ThingSpeak.readFloatField(myChannelNumber, 5);
+    bombaFlag = ThingSpeak.readFloatField(mainChannelNumber, 5);
 
     //conferencia da luminosidade - atribuição de status
     if(luminosidade > 530){
@@ -231,7 +256,7 @@ void loop() {
       Serial.print("\nTimer mode Off");
     } else {
       Serial.print("\nIrrigation Interval:");
-      Serial.print(timerFlag/3600000 + "hours");  
+      Serial.print(recordedTime/3600000 + "hours");  
     }
     
     Serial.print("\n----- Soil Status ----- ");
@@ -282,7 +307,7 @@ void loop() {
     ThingSpeak.setField(5, bombaFlag);
     
     //write fields
-    int x = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
+    int x = ThingSpeak.writeFields(mainChannelNumber,myWriteAPIKey);
   
     if (x == 200){
       Serial.print("Data sent with success!");
@@ -292,8 +317,10 @@ void loop() {
     }
 
     stopRead = millis();
+    passedTime = millis();
   }
-  
+
+  Serial.print(passedTime);
   //digitalWrite(resetPin, LOW);
   //delay de 20
   //delay(20000); // ThingSpeak precisa de pelo menos 15s de interval
