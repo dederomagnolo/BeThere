@@ -1,4 +1,5 @@
 body{
+    min-height:100%;
     background-color: ghostwhite;
     color: black;
     font-size: 20px;
@@ -30,19 +31,37 @@ aside{
 }
 
 .container{
-    width: 600px; /*largura do conteúdo*/
+    min-height:100%;
+    width: 500px; /*largura do conteúdo*/
     /*centralizaçao*/
-    margin-top: 50px;
-    margin-left: auto;
+    margin-top: 10px;
+    margin-left: 200px;
     margin-right: auto;
     text-align: left;
     font-family: "Leelawadee UI" ,sans-serif;
     line-height: 3.0;
 }
 
+.button{
+    text-align: center;
+}
+
 .section-main{
     
     width: 1000px;
+}
+
+.timers{
+    min-height:100%;
+    width: 500px; /*largura do conteúdo*/
+    /*centralizaçao*/
+    position: absolute;
+    top: 145px;
+    margin-left: 500px;
+    margin-right: auto;
+    text-align: left;
+    font-family: "Leelawadee UI" ,sans-serif;
+    line-height: 3.0;
 }
 
 #charts{
@@ -110,10 +129,10 @@ footer{
     font-family: "Verdana" , sans-serif;
     background-color: #000;
     font-size: 12px;
-    clear: both;
-    color: #F2FFFC;
     position: absolute;
     bottom: 0;
+    clear: both;
+    color: #F2FFFC;
     width: 100%;
     
 }

@@ -29,12 +29,18 @@
             <h1>Dashboard</h1>
 
             <div class="container">
-
-                <p>Local Station:</p>
-                <p>Luminosity:</p>
-                <p>Soil Moisture:</p>
-                <p>Temperature:</p>
-                <p>Soil Status:</p>
+                
+                <div class="soil">
+                    <p>Soil Moisture </p>
+                    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/widgets/39942"></iframe>
+                </div>
+                
+                <div class="luminosity">
+                    <p>Luminosity</p>
+                    
+                        <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/widgets/63648"></iframe>
+  
+                </div>          
                 
                 <aside class="weather-box">
                     <a class="weatherwidget-io" href="https://forecast7.com/en/n22d01n47d89/sao-carlos/" data-label_1="SÃO CARLOS" data-label_2="WEATHER" data-theme="gray" >SÃO CARLOS WEATHER</a>
@@ -53,25 +59,20 @@
             
             <h1>Charts</h1>
                 <div class="graph1-moisture">
-                    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&title=Umidade+do+Solo&type=line&xaxis=Hora&yaxis=Umidade+do+Solo+%28%25%29"></iframe>
+                    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&title=Soil+Moisture&type=line"></iframe>
                 </div>
                 
                 <div class="graph2-temperature">
-                    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/4?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&title=Temperatura&type=line"></iframe>
+                    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/4?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&title=Temperature&type=line"></iframe>
                 </div>
             
                 <div class="graph3-umidity">
-                
-
-                    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/3?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&title=Umidade+Relativa+do+Ar&type=line"></iframe>
-
+                    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/3?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&title=Relative+Humidity&type=line"></iframe>
                 </div>
             
                 <div class="graph4-luminosity">
-         
 
                     <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/2?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&title=Luminosidade&type=line"></iframe>
-
 
                 </div>
         </div>
@@ -82,8 +83,10 @@
             
             <div class="container">
                 
-                <p>testing</p>
-            
+                <p>Full sun. 6+ hours of direct sunlight.
+                    Partial sun. 4-5 hours of direct sunlight.
+                    Partial shade. 2-4 hours of direct sunlight.
+                    Shade Less than 1 hour of direct sunlight.</p>
             </div>
         
         </div>
@@ -93,16 +96,32 @@
             
             <h1>Settings</h1>
             
-            <div class="container sensors">
-                <h2>Sensors</h2>
-                <p>Luminosity: <button>ON</button> <button>OFF</button></p>
-                <p>Moisture: <button>ON</button> <button>OFF</button></p>
-                <p>Temperature: <button>ON</button> <button>OFF</button></p>
+            <div class="container modes">
+            <h2>Operation Mode</h2>
+                <button type="button" id="timer-on" class="button button3" >Timer</button>
+                <button type="button" id="umidity-on" class="button button4" >Umidity</button>
+            </div>
+            
+            <div class="timers">
+                <h2>Set timer</h2>
+                
+                <button type="button" id="6hours" class="button button5" >6h</button>  
+                <button type="button" id="8hours" class="button button6" >8h</button>
+                <button type="button" id="12hours" class="button button7" >12h</button>
+                <button type="button" id="16hours" class="button button8" >16h</button>
+                <button type="button" id="24hours" class="button button9" >24h</button>
+                
+                <h2>Pump on for: </h2>
+                <button type="button" id="10s" class="button button10" >10s</button>
+                <button type="button" id="20s" class="button button11" >20s</button>
+                <button type="button" id="30s" class="button button12" >30s</button>
+                <button type="button" id="40s" class="button button13" >40s</button>
+                    
             </div>
 
             <div class="container sensors">
                 <h2>Pump</h2>
-                <button type="button" id="pump-on" class="button button1" >ON</button>
+                <button type="button" id="pump-on" class="button button1"  >ON</button>
                 <button type="button" id="pump-off" class="button button2" >OFF</button>
             </div>
             
@@ -115,13 +134,13 @@
         <img src="teste2.png" alt="logo - Be There" border="2" style="width:203px;height:128px;">
     </div>
     
-    <footer class="rodape-pagina">
+    <!--<footer class="rodape-pagina">
         <!--&copy; Be There-->
         
         <!--Menu Inferior-->
         
-        &copy; Be There - 2019
-    </footer>   
+        <!--&copy; Be There - 2019
+    </footer>-->   
     
     <nav class="menu-navigation-dark">
             
@@ -184,6 +203,46 @@
         
         document.getElementById('pump-off').addEventListener('click', function() {
                 var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field5=0"
+                $.getJSON(url, function(data) {
+                    console.log(data);
+                });
+        });
+        
+        document.getElementById('6hours').addEventListener('click', function() {
+                var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=30000"
+                alert(url);
+                $.getJSON(url, function(data) {
+                    console.log(data);
+                });
+        });
+        
+        document.getElementById('8hours').addEventListener('click', function() {
+                var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=28800000"
+                alert(url);
+                $.getJSON(url, function(data) {
+                    console.log(data);
+                });
+        });
+        
+        document.getElementById('12hours').addEventListener('click', function() {
+                var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=43200000"
+                alert(url);
+                $.getJSON(url, function(data) {
+                    console.log(data);
+                });
+        });
+        
+        document.getElementById('16hours').addEventListener('click', function() {
+                var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=57600000"
+                alert(url);
+                $.getJSON(url, function(data) {
+                    console.log(data);
+                });
+        });
+        
+         document.getElementById('24hours').addEventListener('click', function() {
+                var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=86400000"
+                alert(url);
                 $.getJSON(url, function(data) {
                     console.log(data);
                 });

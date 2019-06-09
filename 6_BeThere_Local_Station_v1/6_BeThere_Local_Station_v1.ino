@@ -11,21 +11,20 @@ EthernetClient client; //ethernet client object
 
 //Atribuição dos pinos
 #define sensor A0
-#define bomba 9
-#define ledVerde 8
+#define luz A1
 #define ledAmarelo 5
 #define ledVermelho 6
+#define ledVerde 8
+#define bomba 9
 #define resetPin 12 
 #define ledAzul 14
 #define bipbip 15
-
-#define luz A1
-//#define autoButton 2
-#define autoLed 3
-
 //Configuração do DHT
 #define pinDHT 7     //DHT communication pin
 #define typeDHT DHT22 //DHT sensor type, in this case DHT22
+
+//#define autoButton 2
+#define autoLed 3
 
 DHT dht(pinDHT, typeDHT); //declaring an DHT object
 
@@ -37,10 +36,13 @@ String nivelLuz;
 int codSoil;
 long stopRead = 0;
 long startPump = 0;
+long startTimer = 0;
+long stopTimer = 0;
 
 //flags
 int bombaFlag = 0;
 int luzFlag;
+long timerFlag = 0;
 
   int melody[] = {
   NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
@@ -77,9 +79,8 @@ void setup() {
   //Reset Button
   pinMode(resetPin, OUTPUT);
 
-  
   //Estados iniciais
-  digitalWrite(bomba, HIGH);
+  digitalWrite(bomba, HIGH); //bomba desligada
   //digitalWrite(resetPin, LOW);
 
 
@@ -97,66 +98,58 @@ void setup() {
     // stop the tone playing:
     noTone(bipbip);
   }
-  //tone(bipbip, 1000);
-
-  /* 
-  //indicadores visuais de inicialização
-  digitalWrite(ledVerde, HIGH);
-  delay(500);
-  digitalWrite(ledVerde, LOW);
-  digitalWrite(ledAmarelo, HIGH);
-  delay(500);
-  digitalWrite(ledAmarelo, LOW);
-  digitalWrite(ledVermelho, HIGH);
-  delay(500);
-  digitalWrite(ledAzul, HIGH);
-  digitalWrite(ledVermelho, LOW);
-  delay(500);
-  digitalWrite(ledVerde, HIGH);
-  delay(500);
-  digitalWrite(ledAmarelo, HIGH);
-  delay(500);
-  digitalWrite(ledVermelho, HIGH);
-  digitalWrite(ledAzul, LOW);
-  delay(200);
-
-  */
-  
+ 
   Serial.print("------------ BE THERE - ONLINE ------------");
 }
 
 void loop() {
-  
-  //#####LEITURAS####
 
+  timerFlag = ThingSpeak.readFloatField(myChannelNumber, 6);
+  
+  if(timerFlag != 0){
+    if(millis()-stopTimer > timerFlag){
+
+    startPump = millis();
+    Serial.print("\nTimer mode: pump on");
+    
+    while(millis()<startPump+20000){
+        digitalWrite(bomba, LOW);
+        digitalWrite(ledAzul, HIGH);
+      }
+
+    Serial.print("\nYour garden has been irrigated!");
+    stopTimer = millis();
+    }
+  }
+  
   if(millis()-stopRead > 20000){
     noTone(bipbip);
+    
     //leitura da umidade
     umidade = analogRead(sensor);
     //leitura da ponta analógica do divisor de tensão com foto resistor
     luminosidade = analogRead(luz);
     //luminosidade = map(valorpot, 0, 1023, 0, 255); 
-    
+
+    //check do status da bomba no ThingSpeak
     bombaFlag = ThingSpeak.readFloatField(myChannelNumber, 5);
 
-    //conferencia da luminosidade
-
+    //conferencia da luminosidade - atribuição de status
     if(luminosidade > 530){
       luzFlag = 0; //sem luz
     }
-
-    else if (luminosidade > 530){
+    else if (luminosidade <= 300){
       luzFlag = 1; //com luz incidente
     }
-
-    else if (luminosidade > 300 && luminosidade < 530){
+    else if (luminosidade > 300 && luminosidade <= 530){
       luzFlag = 2; //luz moderada
     }
 
     //linha de teste
     Serial.print("\nPUMP: ");
     Serial.print(bombaFlag);
-      
+
+    //bomba foi ligada via web
     if(bombaFlag == 1){
       Serial.print("\nThe pump is turned on by web app!\n");
 
@@ -169,7 +162,7 @@ void loop() {
       
       bombaFlag = 0;
       digitalWrite(ledAzul, LOW);
-      Serial.print("\nFinished watering your plants!\n");
+      Serial.print("\nFinished watering your garden!\n");
     }
     
     //read humidity and temperature
@@ -191,8 +184,11 @@ void loop() {
       digitalWrite(ledVerde, HIGH);
       digitalWrite(ledVermelho, LOW);
       digitalWrite(ledAmarelo, LOW);
-      digitalWrite(bomba, HIGH); //desliga bomba
       digitalWrite(ledAzul, LOW);
+      
+      if (timerFlag == 0){
+        digitalWrite(bomba, HIGH); //desliga bomba
+      }
     }
     
     else if (umidade > 500 && umidade < 750){
@@ -203,8 +199,11 @@ void loop() {
       digitalWrite(ledVerde, LOW);
       digitalWrite(ledVermelho, LOW);
       digitalWrite(ledAmarelo, HIGH); 
-      digitalWrite(bomba, HIGH); //desliga bomba
       digitalWrite(ledAzul, LOW);
+
+      if (timerFlag == 0){
+        digitalWrite(bomba, HIGH); //desliga bomba
+      }
     }
     
     else if(umidade > 750)
@@ -216,30 +215,37 @@ void loop() {
       digitalWrite(ledVermelho, HIGH);
       digitalWrite(ledAmarelo, LOW);
       
-      if (bomba){
+      if (timerFlag == 0){
         digitalWrite(bomba, LOW); //liga bomba
         digitalWrite(ledAzul, HIGH); 
-      }
-      
+      }  
     }
   
     //ajustar limites para exibir o valor de 0 - 100 (seco-umido/sem luz-com luz)
-    umidade = map(umidade, 0, 1024, 100, 0); 
+    umidade = map(umidade, 0, 1023, 100, 0); 
 
     //imprimir na serial as leituras
     Serial.print("\n------------ BE THERE - REPORT ------------");
+
+    if(timerFlag == 0){
+      Serial.print("\nTimer mode Off");
+    } else {
+      Serial.print("\nIrrigation Interval:");
+      Serial.print(timerFlag/3600000 + "hours");  
+    }
     
     Serial.print("\n----- Soil Status ----- ");
     Serial.print("\nSoil Moisture: ");
     Serial.print(umidade);
     Serial.print("%");
-      
+
+    //status do solo
     if (codSoil == 1){
-      nivelUmidade = "\nMoist";
+      nivelUmidade = "moist";
     } else if (codSoil == 2){
-        nivelUmidade = "\nPartially Moist";
+        nivelUmidade = "partially Moist";
     } else{
-        nivelUmidade = "\nDry";  
+        nivelUmidade = "dry";  
     }
 
     if (luzFlag == 1){
@@ -282,6 +288,7 @@ void loop() {
       Serial.print("Data sent with success!");
     } else{
         Serial.print("Coneection Error: " + String(x));
+        Serial.print("\n");
     }
 
     stopRead = millis();
