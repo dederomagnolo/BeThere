@@ -3,7 +3,6 @@
 #include <Ethernet.h>
 #include "DHT.h" //DHT Library
 #include <Wire.h>
-#include "pitches.h"
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 EthernetClient client; //ethernet client object
@@ -15,10 +14,9 @@ EthernetClient client; //ethernet client object
 #define ledAmarelo 5
 #define ledVermelho 6
 #define ledVerde 8
-#define bomba 9
+#define bomba 2
 #define resetPin 12 
 #define ledAzul 14
-#define bipbip 15
 #define timerLed 16
 //Configuração do DHT
 #define pinDHT 7     //DHT communication pin
@@ -32,6 +30,7 @@ DHT dht(pinDHT, typeDHT); //declaring an DHT object
 //variáveis para gravação
 int umidade;
 int luminosidade;
+int luminosidade2;
 String nivelUmidade;
 String nivelLuz;
 int codSoil;
@@ -47,14 +46,6 @@ long int recordedTime = 0;
 long timerFlag = 0;
 int timeSet = 0;
 unsigned long totalTempo = 0UL;
-
-  int melody[] = {
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
-  };
-
-  int noteDurations[] = {
-  4, 8, 8, 4, 4, 4, 4, 4
-  };
 
 //Campos do ThingSpeak
 unsigned long mainChannelNumber = 695672;
@@ -79,8 +70,7 @@ void setup() {
   pinMode(ledVermelho, OUTPUT);
   pinMode(ledAzul, OUTPUT); //para indicar bomba ligada
   pinMode(timerLed, OUTPUT);
-  //buzzer
-  pinMode(bipbip, OUTPUT);
+
   //Reset Button
   pinMode(resetPin, OUTPUT);
 
@@ -88,22 +78,6 @@ void setup() {
   digitalWrite(bomba, HIGH); //bomba desligada
   //digitalWrite(resetPin, LOW);
   digitalWrite(timerLed, LOW);
-
-
-  for (int thisNote = 0; thisNote < 8; thisNote++) {
-
-    // to calculate the note duration, take one second divided by the note type.
-    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
-    int noteDuration = 1000 / noteDurations[thisNote];
-    tone(bipbip, melody[thisNote], noteDuration);
-
-    // to distinguish the notes, set a minimum time between them.
-    // the note's duration + 30% seems to work well:
-    int pauseBetweenNotes = noteDuration * 1.30;
-    delay(pauseBetweenNotes);
-    // stop the tone playing:
-    noTone(bipbip);
-  }
  
   Serial.print("------------ BE THERE - ONLINE ------------\n");
 }
@@ -130,14 +104,6 @@ void loop() {
   if(millis()-stopRead > 20000){
 
     totalTempo = millis()-startTimer;
-    Serial.print("\nmilis:");
-    Serial.print(millis());
-    Serial.print("\nStart:");
-    Serial.print(startTimer);
-    Serial.print("\n");
-    Serial.print("\nSubtração millis-start:");
-    Serial.print(totalTempo);
-    noTone(bipbip);
     
     timeSet = ThingSpeak.readFloatField(mainChannelNumber, 6);
 
@@ -159,8 +125,6 @@ void loop() {
     if(updateTime != recordedTime){ //verifica se ocorreu mudança no status do Timer
 
       recordedTime = updateTime; //grava o novo time setado
-      Serial.print("\natualiza tempo:");
-      Serial.print(recordedTime);
       
       if(recordedTime != 0){
         timerFlag = 1; //timer ligado
@@ -305,13 +269,11 @@ void loop() {
       nivelLuz = "no light";
     }
 
-    luminosidade = map(luminosidade, 0, 1023, 100, 0); 
+    luminosidade2 = map(luminosidade, 0, 1023, 100, 0); 
     
-    Serial.print("\nLuminosity: ");
-    Serial.print(luminosidade);
-    Serial.print("%\n");
-    Serial.print("Your soil is " + nivelUmidade + " and your garden has " + nivelLuz);
-    Serial.print("\n");
+    Serial.println("\nLuminosity: ");
+    Serial.println(luminosidade2);
+    Serial.println("Your soil is " + nivelUmidade + " and your garden has " + nivelLuz);
   
     //DHT posts
     Serial.print("\n----- Weather Status -----");
