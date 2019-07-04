@@ -11,19 +11,15 @@ EthernetClient client; //ethernet client object
 //Atribuição dos pinos
 #define sensor A0
 #define luz A1
-#define ledAmarelo 5
-#define ledVermelho 6
-#define ledVerde 8
-#define bomba 2
-#define resetPin 12 
-#define ledAzul 14
-#define timerLed 16
-//Configuração do DHT
-#define pinDHT 7     //DHT communication pin
-#define typeDHT DHT22 //DHT sensor type, in this case DHT22
+#define ledVermelho 9
+#define ledAmarelo 8
+#define ledVerde 7
+#define ledAzul 6
+#define bomba 5
 
-//#define autoButton 2
-#define autoLed 3
+//Configuração do DHT
+#define pinDHT 4     //DHT communication pin
+#define typeDHT DHT22 //DHT sensor type, in this case DHT22
 
 DHT dht(pinDHT, typeDHT); //declaring an DHT object
 
@@ -39,13 +35,17 @@ long startPump = 0;
 unsigned long startTimer = 0UL;
 
 //flags
-int bombaFlag = 0;
+//int bombaFlag = 0;
 int luzFlag;
 long int updateTime = 0;
 long int recordedTime = 0;
-long timerFlag = 0;
-int timeSet = 0;
+long timerFlag = 0; //flag p/ indicar se o timer está ligado ou desligado
+int timeSet = 0; //armazena o tempo do timer lido no ThingSpeak
+int tempSet; //valor de temperatura configurado pelo usuario como maximo
+int addTime = 0; //tempo de acrescimo da bomba caso a temperatura seja maior que maxTemp e umidade baixa
 unsigned long totalTempo = 0UL;
+int pumpTime = 0;
+int deltaTemp = 0;
 
 //Campos do ThingSpeak
 unsigned long mainChannelNumber = 695672;
@@ -69,15 +69,10 @@ void setup() {
   pinMode(ledAmarelo, OUTPUT);
   pinMode(ledVermelho, OUTPUT);
   pinMode(ledAzul, OUTPUT); //para indicar bomba ligada
-  pinMode(timerLed, OUTPUT);
-
-  //Reset Button
-  pinMode(resetPin, OUTPUT);
 
   //Estados iniciais
   digitalWrite(bomba, HIGH); //bomba desligada
   //digitalWrite(resetPin, LOW);
-  digitalWrite(timerLed, LOW);
  
   Serial.print("------------ BE THERE - ONLINE ------------\n");
 }
@@ -89,8 +84,10 @@ void loop() {
     if(totalTempo > recordedTime){
         startPump = millis();
         Serial.print("\nTimer mode: pump on");
+
+        pumpTime = 20000 + addTime; //tempo padrao da bomba ligada + addTime
         
-        while(millis()<startPump+20000){
+        while(millis()<startPump+pumpTime){
             digitalWrite(bomba, LOW);
             digitalWrite(ledAzul, HIGH);
         }
@@ -98,27 +95,25 @@ void loop() {
         digitalWrite(ledAzul, LOW);
         Serial.print("\nYour garden has been watered!\n");
         startTimer = millis();
+        addTime = 0;
     }
   }
 
-  if(millis()-stopRead > 20000){
+  if(millis()-stopRead > 35000){
 
-    totalTempo = millis()-startTimer;
+    totalTempo = millis()-startTimer; //calcula quantidade de tempo desde o início do timer
     
-    timeSet = ThingSpeak.readFloatField(mainChannelNumber, 6);
+    timeSet = ThingSpeak.readFloatField(mainChannelNumber, 6); //ler timeSet: indica se o timer foi ligado
 
-    Serial.print("\ntimeset:");
-    Serial.print(timeSet);
-
+    //recebe o timeSet do ThingSpeak e verifica sr o timer está ligado.
+    //nesta seção, no funcionamento ideal seria necessário programar as rotinas para 6h, 8h, etc.
+    //nesta versão o timer ligado seta o tempo do timer para acionar a bomba a cada 2 minutos.
     switch (timeSet) {
     case 0:
-      updateTime = 0;
+      updateTime = 0; //timer desligado
       break;
     case 1:
-      updateTime = 300000;
-      break;
-    case 2:
-      updateTime = 28800000;
+      updateTime = 120000; //ligar por 2 min
       break;
     }
     
@@ -128,16 +123,14 @@ void loop() {
       
       if(recordedTime != 0){
         timerFlag = 1; //timer ligado
-        digitalWrite(timerLed, HIGH);
         startTimer = millis(); //timer começa contar
+        Serial.print("\n:");
+        Serial.println(recordedTime);
       } else{
           timerFlag = 0; //timer desligado
-          digitalWrite(timerLed, LOW);
         }   
     } //se nao ocorre mudança, o tempo gravado é mantido
 
-    Serial.print("\ntempo gravado:");
-    Serial.print(recordedTime);
     
     //leitura da umidade
     umidade = analogRead(sensor);
@@ -145,39 +138,18 @@ void loop() {
     luminosidade = analogRead(luz);
 
     //check do status da bomba no ThingSpeak
-    bombaFlag = ThingSpeak.readFloatField(mainChannelNumber, 5);
+    //bombaFlag = ThingSpeak.readFloatField(mainChannelNumber, 5);
 
     //conferencia da luminosidade - atribuição de status
-    if(luminosidade > 530){
+    if(luminosidade >= 891){
       luzFlag = 0; //sem luz
+      digitalWrite(ledAmarelo, LOW);
     }
-    else if (luminosidade <= 300){
-      luzFlag = 1; //com luz incidente
+    else {
+      luzFlag = 1; //com luz
+      digitalWrite(ledAmarelo, HIGH);
     }
-    else if (luminosidade > 300 && luminosidade <= 530){
-      luzFlag = 2; //luz moderada
-    }
-
-    //linha de teste
-    Serial.print("\nPUMP: ");
-    Serial.print(bombaFlag);
-
-    //bomba foi ligada via web
-    if(bombaFlag == 1){
-      Serial.print("\nThe pump is turned on by web app!\n");
-
-      startPump = millis();
-      
-      while(millis()<startPump+20000){
-        digitalWrite(bomba, LOW);
-        digitalWrite(ledAzul, HIGH);  
-      }
-      
-      bombaFlag = 0;
-      digitalWrite(ledAzul, LOW);
-      Serial.print("\nFinished watering your garden!\n");
-    }
-    
+ 
     //read humidity and temperature
     float h = dht.readHumidity();
     float t = dht.readTemperature();
@@ -186,8 +158,23 @@ void loop() {
     if (isnan(h) || isnan(t)) {
       Serial.print("\n");
       Serial.print("\nDHT failed! Check Connections!");
+    } else {
+      if(timerFlag == 1){ //verifica modo timer
+        tempSet = ThingSpeak.readFloatField(mainChannelNumber, 5); //ler temperatura maxima configurada pelo usuário
+      }
+      if(t > tempSet && h < 30.00){ //verifica se a temperatura lida é maior que a temperatura configurada pelo usuário via web
+
+          deltaTemp = t-tempSet;
+          if(deltaTemp > 5 && deltaTemp < 10){
+            addTime = 15000; //vai somar 15 s no tempo padrao da bomba
+          } else if (deltaTemp > 10 && deltaTemp < 20){
+            addTime = 25000; //vai somar 25 s no tempo padrao da bomba
+            } else if(deltaTemp > 20){
+              addTime = 30000; //vai somar 30s no tempo padrao da bomba
+              }
+        }
     }
-    
+
     //classificação do solo
     if (umidade <= 500){
       
@@ -196,7 +183,6 @@ void loop() {
       //Acende led verde
       digitalWrite(ledVerde, HIGH);
       digitalWrite(ledVermelho, LOW);
-      digitalWrite(ledAmarelo, LOW);
       digitalWrite(ledAzul, LOW);
       
       if (timerFlag == 0){
@@ -211,7 +197,6 @@ void loop() {
       //Acende led amarelo
       digitalWrite(ledVerde, LOW);
       digitalWrite(ledVermelho, LOW);
-      digitalWrite(ledAmarelo, HIGH); 
       digitalWrite(ledAzul, LOW);
 
       if (timerFlag == 0){
@@ -226,14 +211,18 @@ void loop() {
       //Acende led vermelho
       digitalWrite(ledVerde, LOW);
       digitalWrite(ledVermelho, HIGH);
-      digitalWrite(ledAmarelo, LOW);
       
-      if (timerFlag == 0){
+      if (timerFlag == 0 && luzFlag == 1){
         digitalWrite(bomba, LOW); //liga bomba
         digitalWrite(ledAzul, HIGH); 
       }  
     }
-  
+
+    if(codSoil == 3 && luzFlag == 0 && timerFlag == 0){
+        digitalWrite(bomba, HIGH); //desliga bomba
+        digitalWrite(ledAzul, LOW); //apaga led bomba
+      }
+      
     //ajustar limites para exibir o valor de 0 - 100 (seco-umido/sem luz-com luz)
     umidade = map(umidade, 0, 1023, 100, 0); 
 
@@ -241,11 +230,12 @@ void loop() {
     Serial.print("\n------------ BE THERE - REPORT ------------");
 
     if(timerFlag == 0){
-      Serial.print("\nTimer mode Off");
+      Serial.print("\nTimer Mode Off!");
+      Serial.print("\nUmidity Mode On!");
     } else {
-      Serial.print("\nIrrigation Interval:");
-      Serial.print((recordedTime/60000) + "hours");  
-    }
+      Serial.print("\nTimer Mode On!");
+      Serial.print("\nUmidity Mode Off!");
+      }
     
     Serial.print("\n----- Soil Status ----- ");
     Serial.print("\nSoil Moisture: ");
@@ -263,16 +253,15 @@ void loop() {
 
     if (luzFlag == 1){
       nivelLuz = "incident light";
-    } else if (luzFlag == 2){
-      nivelLuz = "partial light";
     } else {
       nivelLuz = "no light";
     }
 
-    luminosidade2 = map(luminosidade, 0, 1023, 100, 0); 
+    luminosidade2 = map(luminosidade, 1023, 0, 0, 100); 
     
-    Serial.println("\nLuminosity: ");
-    Serial.println(luminosidade2);
+    Serial.print("\nLuminosity: ");
+    Serial.print(luminosidade2);
+    Serial.println("%");
     Serial.println("Your soil is " + nivelUmidade + " and your garden has " + nivelLuz);
   
     //DHT posts
@@ -290,7 +279,6 @@ void loop() {
     ThingSpeak.setField(2, luminosidade);
     ThingSpeak.setField(3, h);
     ThingSpeak.setField(4, t);
-    ThingSpeak.setField(5, bombaFlag);
     
     //write fields
     int x = ThingSpeak.writeFields(mainChannelNumber,myWriteAPIKey);
@@ -305,8 +293,5 @@ void loop() {
     stopRead = millis();
   }
 
-  //digitalWrite(resetPin, LOW);
-  //delay de 20
-  //delay(20000); // ThingSpeak precisa de pelo menos 15s de interval
   
 }
