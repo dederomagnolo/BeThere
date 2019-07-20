@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 
 <head>
-    <title>BeThere</title>
-    
+    <title>BeThere</title>    
     
     <meta charset="utf-8">
     <!--<link rel="icon" href="favicon.png">-->
@@ -48,11 +47,9 @@
                 !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='https://weatherwidget.io/js/widget.min.js';fjs.parentNode.insertBefore(js,fjs);}}(document,'script','weatherwidget-io-js');
                 </script>
                 
-                </aside>
-                
+                </aside>               
 
-            </div>
-        
+            </div>        
         </div>
         
         <div id="charts">
@@ -71,42 +68,33 @@
                 </div>
             
                 <div class="graph4-luminosity">
-
                     <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/695672/charts/2?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&title=Luminosidade&type=line"></iframe>
-
                 </div>
         </div>
         
-        <div id="books">
-            
-            <h1>Library</h1>
-            
+        <div id="books">            
+            <h1>Library</h1>            
             <div class="container">
                 
                 <p>Full sun. 6+ hours of direct sunlight.
                     Partial sun. 4-5 hours of direct sunlight.
                     Partial shade. 2-4 hours of direct sunlight.
                     Shade Less than 1 hour of direct sunlight.</p>
-            </div>
-        
+            </div>        
         </div>
         
         
         <div id="settings">
             
             <h1>Settings</h1>
-            
+
             <div class="container modes">
             <h2>Operation Mode</h2>
-                <label class="switch">
-                  <input type="checkbox">
-                  <span class="slider rounded"></span>
-                </label>
                 <button type="button" id="timer-on" class="button button3" >Timer</button>
                 <button type="button" id="umidity-on" class="button button4" >Umidity</button>
             </div>
             
-            <div class="timers">
+            <div class="timers" id="TimerOptions">
                 <h2>Set timer</h2>
                 
                 <button type="button" id="6hours" class="button button5" >6h</button>  
@@ -115,14 +103,17 @@
                 <button type="button" id="16hours" class="button button8" >16h</button>
                 <button type="button" id="24hours" class="button button9" >24h</button>
                 
+                <div>
+                    <h3><span>Temperature: <span id="tempValueSpan"></span>ºC </span> </h3><span><input type="text" id="tempValue" placeholder="insert the temperature"/input></span>
+                    <button type="button" id="send" class="button">SEND</button>
+                </div>
                     
             </div>
-
-            <div class="container sensors">
-                <h2>Manual Mode</h2>
-                <button type="button" id="pump-on" class="button button1"  >TURN PUMP ON</button>
-            </div>
-            
+            <div class="container modes" id="UmidityOptions">
+                <h2>UMIDITY MODE ON!</h2>
+                <p>Running in umidity mode, the timer mode is offline. Click in "Timer"
+                   to switch off umidity mode and use timer. </p>
+            </div>            
         </div>
             
         
@@ -153,8 +144,23 @@
 
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
         <script src="jquery.slicknav.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 
-        <script>
+
+        <script>        
+        
+        var umidade = 1;
+        var timer = 0;
+
+                $("#timer-on").click(function(){
+                    $("#UmidityOptions").hide();
+                    $("#TimerOptions").show();
+                });
+    
+                $("#umidity-on").click(function(){
+                    $("#UmidityOptions").show();
+                    $("#TimerOptions").hide();
+                });
 
             $(function(){
 
@@ -176,83 +182,68 @@
 	           document.getElementById(ID).style.display = "block";
 
             }
+
             function  ocultar(ID){
                 document.getElementById(ID).style.display = "none";
                 $("#dive").hide("slow");
             }
-        </script>
-    
-    <script>
-        
-        /*	document.getElementById('pump-on').addEventListener('click', function() {
-				var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field5=1"
-                var d = new Date();
-                var n = d.toISOString();       
-                
-				$.getJSON(url, function(data) {
-					console.log(data);
-				});
 
-                $.getJSON("https://api.thingspeak.com/channels/695672/fields/5/last.json?timezone=America/Sao_Paulo" , function(data) {
-                    alert(data["created_at"]);
-                    alert(n);
-                }); 
-		});
+            function alterMode(){
+            }
         
-        document.getElementById('pump-off').addEventListener('click', function() {
-                var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field5=0"
-                $.getJSON(url, function(data) {
-                    console.log(data);
-                });
-        });
-        */
-            
         document.getElementById('umidity-on').addEventListener('click', function() {
                 var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=0"
-                alert(url);
+                alert("Umidity Mode ON");
                 $.getJSON(url, function(data) {
                     console.log(data);
                 });
         });
+
         
-        document.getElementById('6hours').addEventListener('click', function() {
+        document.getElementById('timer-on').addEventListener('click', function() {
                 var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=1"
-                alert(url);
+                alert("Timer Mode ON");
                 $.getJSON(url, function(data) {
                     console.log(data);
                 });
         });
-        
-        document.getElementById('8hours').addEventListener('click', function() {
-                var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=2"
-                alert(url);
-                $.getJSON(url, function(data) {
-                    console.log(data);
-                });
+
+        // Função para envio de uma nova temperatura        
+        document.getElementById('send').addEventListener('click', function() {
+            var temperatureSend = document.getElementById('tempValue').value ;
+               var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field5="+temperatureSend
+               alert("Temperature Send: "+temperatureSend);
+               $.getJSON(url, function(data) {
+                location.reload("#settings");
+                   console.log(data);
+               });
+       });
+
+       // Função para leiura da variavel de temperatura na API (ultima temperatura enviada)
+       $.getJSON('https://api.thingspeak.com/channels/695672/field/5/last.json?apikey=QVBH04I290VRXEOL', function(data) {          
+            dataField5 = data.field5;
+            if (dataField5) {
+                // $('#tempValueSpan').val(dataField5);
+                document.getElementById('tempValueSpan').innerHTML = dataField5;
+            }          
         });
-        
-        document.getElementById('12hours').addEventListener('click', function() {
-                var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=3"
-                alert(url);
-                $.getJSON(url, function(data) {
-                    console.log(data);
-                });
-        });
-        
-        document.getElementById('16hours').addEventListener('click', function() {
-                var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=4"
-                alert(url);
-                $.getJSON(url, function(data) {
-                    console.log(data);
-                });
-        });
-        
-         document.getElementById('24hours').addEventListener('click', function() {
-                var url = "http://api.thingspeak.com/update?api_key=ZY113X3ZSZG96YC8&field6=5"
-                alert(url);
-                $.getJSON(url, function(data) {
-                    console.log(data);
-                });
+
+        // Leitura da API para receber ultima "posição" do tipo de modo ativo
+       $.getJSON('https://api.thingspeak.com/channels/695672/field/6/last.json?apikey=QVBH04I290VRXEOL', function(data) {          
+            dataField6 = data.field6;
+            if (dataField6 == 1) {
+                timer = 1; // Timer ativa
+                umidade = 0; // Umidade desativada
+                    console.log("Timer Ativo - Umidade Desativada");
+                    $("#TimerOptions").show();
+                    $("#UmidityOptions").hide();
+            } else {
+                timer = 0;  // Timer desativado
+                umidade = 1; // Umidade ativa
+                    console.log("Umidade Ativada - Timer Desativado");  
+                    $("#UmidityOptions").show();
+                    $("#TimerOptions").hide();  
+            }                    
         });
         
     </script>

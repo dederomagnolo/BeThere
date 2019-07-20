@@ -139,9 +139,9 @@ void loop() {
 
     //check do status da bomba no ThingSpeak
     //bombaFlag = ThingSpeak.readFloatField(mainChannelNumber, 5);
-
+    //Serial.print(luminosidade);
     //conferencia da luminosidade - atribuição de status
-    if(luminosidade >= 891){
+    if(luminosidade < 490){
       luzFlag = 0; //sem luz
       digitalWrite(ledAmarelo, LOW);
     }
@@ -215,7 +215,11 @@ void loop() {
       if (timerFlag == 0 && luzFlag == 1){
         digitalWrite(bomba, LOW); //liga bomba
         digitalWrite(ledAzul, HIGH); 
-      }  
+      }
+      else if (timerFlag == 0 && luzFlag == 0) {
+        digitalWrite(bomba, HIGH); //liga bomba
+        digitalWrite(ledAzul, LOW); 
+      }
     }
 
     if(codSoil == 3 && luzFlag == 0 && timerFlag == 0){
@@ -257,7 +261,7 @@ void loop() {
       nivelLuz = "no light";
     }
 
-    luminosidade2 = map(luminosidade, 1023, 0, 0, 100); 
+    luminosidade2 = map(luminosidade, 0, 1023, 0, 100); 
     
     Serial.print("\nLuminosity: ");
     Serial.print(luminosidade2);
@@ -276,7 +280,7 @@ void loop() {
 
     //set fields
     ThingSpeak.setField(1, umidade);
-    ThingSpeak.setField(2, luminosidade);
+    ThingSpeak.setField(2, luminosidade2);
     ThingSpeak.setField(3, h);
     ThingSpeak.setField(4, t);
     
