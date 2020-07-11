@@ -1,12 +1,10 @@
 import React from 'react';
 import { Container, Row } from 'react-grid-system';
+import { Header } from '../header';
 
 export const Charts = () => {
 
     return (
-        <Container>
-            Charts!
-        </Container>
-
+        <Header title="Charts"/>
     );
 }
