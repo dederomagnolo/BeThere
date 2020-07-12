@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import './styles.css';
+import '../styles.css';
 import { Container, Row, Col} from 'react-grid-system';
 import { Header } from '../header';
 import { Card, Button } from 'semantic-ui-react';
@@ -16,7 +16,6 @@ export const Settings = () => {
         setShowMoisture(false);
         setShowTimer(true);
     }
-
 
     const displayMoisture = () => {
         setShowTemperature(false);
@@ -40,7 +39,7 @@ export const Settings = () => {
                         <Row style={{paddingTop: '30px', paddingLeft: '20px'}}>
                             <Card.Group itemsPerRow={3}>
                                 <MenuCard iconName="clock" label="Timer" onClick={() => displayTimer()}/>
-                                <MenuCard iconName="tint" label="Moisture" onClick={() => displayMoisture()}/>
+                                <MenuCard iconName="leaf" label="Moisture" onClick={() => displayMoisture()}/>
                                 <MenuCard iconName="thermometer half" label="Temperature" onClick={() => displayTemperature()}/>
                             </Card.Group>
                         </Row>

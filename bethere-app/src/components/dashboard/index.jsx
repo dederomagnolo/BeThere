@@ -13,6 +13,14 @@ export const Dashboard = () => {
                     <span style={{fontSize: "20px"}}>Hello!</span>
                 </Col>
                 <IOSSwitch />
+                <p>Soil Moisture </p>
+                <iframe 
+                    width="450" 
+                    height="260" 
+                    style={{border: '1px solid #cccccc'}} 
+                    src="https://thingspeak.com/channels/695672/widgets/39942" 
+                />
+                
             </Container>
         </>
     );

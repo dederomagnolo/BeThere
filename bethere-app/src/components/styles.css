@@ -1,5 +1,6 @@
 .content {
     animation: fadeIn ease 0.5s;
+    padding-top: 20px;
 }
 
 @keyframes fadeIn {

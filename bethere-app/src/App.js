@@ -1,44 +1,54 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './App.css';
-import { BrowserRouter, Switch , Route, Link } from 'react-router-dom';
+import { BrowserRouter, Switch , Route, Link, useHistory} from 'react-router-dom';
 import { Col, Row, Container } from 'react-grid-system';
-import { Header } from './components/header';
 import { Settings } from './components/settings';
 import { Dashboard } from './components/dashboard';
 import { Charts } from './components/charts';
+import { SideMenu } from './components/sideMenu';
+import { Menu } from 'semantic-ui-react';
 import logo from './assets/bethere_logo.png';
 
 function App() {
+  const [activeItem, setActiveItem] = useState("Dashboard");
+
+  const handleItemClick = (e, {name}) => {
+    console.log(name);
+    setActiveItem(name);
+  }
+
+  console.log(activeItem === 'Dashboard');
+
   return (
     <BrowserRouter>
-    <div style={{display: 'flex'}}>
-      <Col lg={3} style={{ backgroundColor:  '#339999', height: '100vh' }}>
-        <Container style={{height: '100%', color: 'white', boxShadow: '1px 3px 3px gray'}}>
-          <Row style={{ height: "100%", color: 'white'}}>
-            <Col xl={12} xs={12} lg={12}>
-              <Row justify="center">
+    <div style={{display: 'flex', height: '100vh' }}>
+      {/* <SideMenu /> */}
+      <Menu pointing vertical color="teal">
+        <Col xl={12} xs={12} lg={12}>
+            <div style={{backgroundColor: '#339999'}}>
                 <img src={logo} alt="logo" width={200} />
-              </Row>
-            </Col>
-            <Col xl={12} xs={12} lg={12}>
-              <Row justify="center">
-                <Link style={{color: 'white'}} to="/">Dashboard</Link>
-              </Row>
-            </Col>
-            <Col xl={12} xs={12} lg={12}>
-              <Row justify="center">
-                <Link style={{color: 'white'}} to="/charts">Charts</Link>
-              </Row>
-            </Col>
-            <Col xl={12} xs={12} lg={12}>
-              <Row justify="center">
-                <Link style={{color: 'white'}} to="/settings">Settings</Link>
-              </Row>
-            </Col>
-          </Row>
-        </Container>
-      </Col>
-      <Col lg={9}>
+            </div>
+        </Col>
+        <Menu.Item
+          as={Link} to="/"
+          name='Dashboard'
+          active={activeItem === 'Dashboard'}
+          onClick={handleItemClick}
+        />
+        <Menu.Item
+          as={Link} to="/charts"
+          name='Charts'
+          active={activeItem === 'Charts'}
+          onClick={handleItemClick}
+        />
+        <Menu.Item
+           as={Link} to="/settings"
+          name='Settings'
+          active={activeItem === 'Settings'}
+          onClick={handleItemClick}
+        />
+      </Menu>
+      <Col lg={9} style={{padding: "0 30px 0"}}>
         <Switch>
           <Route exact path="/" component={Dashboard} />
           <Route path="/charts" component={Charts} />
