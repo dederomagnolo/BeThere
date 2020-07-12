@@ -14,7 +14,7 @@ function App() {
     <div style={{display: 'flex'}}>
       <Col lg={3} style={{ backgroundColor:  '#339999', height: '100vh' }}>
         <Container style={{height: '100%', color: 'white', boxShadow: '1px 3px 3px gray'}}>
-          <Row style={{ height: "100%"}}>
+          <Row style={{ height: "100%", color: 'white'}}>
             <Col xl={12} xs={12} lg={12}>
               <Row justify="center">
                 <img src={logo} alt="logo" width={200} />
@@ -22,17 +22,17 @@ function App() {
             </Col>
             <Col xl={12} xs={12} lg={12}>
               <Row justify="center">
-                <Link to="/">Dashboard</Link>
+                <Link style={{color: 'white'}} to="/">Dashboard</Link>
               </Row>
             </Col>
             <Col xl={12} xs={12} lg={12}>
               <Row justify="center">
-                <Link to="/charts">Charts</Link>
+                <Link style={{color: 'white'}} to="/charts">Charts</Link>
               </Row>
             </Col>
             <Col xl={12} xs={12} lg={12}>
               <Row justify="center">
-                <Link to="/settings">Settings</Link>
+                <Link style={{color: 'white'}} to="/settings">Settings</Link>
               </Row>
             </Col>
           </Row>

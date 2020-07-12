@@ -6,9 +6,11 @@ import { Container, Row } from 'react-grid-system';
 
 export const Header = ({title}) => {
     return (
-        <div className="headerTitle">
-            {title}
-        </div>
+        <Container>
+            <div className="headerTitle">
+                {title}
+            </div>
+        </Container> 
     );
 }
 
