@@ -32,56 +32,51 @@ export const Settings = () => {
     return (
         <>  
             <Header title="Settings"/>
-            <Container className="content">
-                <Row>
-                    <Col xl={12} xs={12} style={{paddingTop: "20px", paddingBottom: "20px"}}>
-                        <span style={{fontSize: "20px"}}>Operation Mode</span>
-                        <Row style={{paddingTop: '30px', paddingLeft: '20px'}}>
+                <Container className="content" style={{paddingTop: "20px", paddingBottom: "20px", maxWidth: "536px"}}>
+                    <span style={{fontSize: "20px"}}>Operation Mode</span>
+                        <div style={{paddingTop: '20px'}}>
                             <Card.Group itemsPerRow={3}>
                                 <MenuCard iconName="clock" label="Timer" onClick={() => displayTimer()}/>
                                 <MenuCard iconName="leaf" label="Moisture" onClick={() => displayMoisture()}/>
                                 <MenuCard iconName="thermometer half" label="Temperature" onClick={() => displayTemperature()}/>
                             </Card.Group>
-                        </Row>
-                    </Col>
-                </Row>
-                {showTimer && <Row className="content">
-                    <Col xl={12} xs={12} style={{fontSize: "20px", paddingTop: "20px"}}>
-                        Timer Settings
-                    </Col>
-                    <Col xl={12} style={{paddingTop: "20px", paddingBottom: "20px"}}>
-                        With this mode, Be There will work considering the time set to turn on your pump. Set below:
-                    </Col>
-                    <Col xl={12}>
-                        <Button color="blue" circular>6h</Button>
-                        <Button circular>8h</Button>
-                        <Button circular>12h</Button>
-                        <Button circular>24h</Button>
-                    </Col>
-                </Row>}
+                        </div>
 
-                {showMoisture && <Row className="content">
-                    <Col xl={12} xs={12} style={{fontSize: "20px", paddingTop: "20px"}}>
-                        Moisture Settings
-                    </Col>
-                    <Col xl={12} style={{paddingTop: "20px", paddingBottom: "20px"}}>
-                        With this mode, Be There will turn on your pump when the moisture sensor reaches the set point. Set below:
-                    </Col>
-                </Row>}
+                        {showTimer && 
+                            <div className="content">
+                                <div style={{fontSize: "20px", paddingTop: "20px", paddingLeft: "0 !important"}}>
+                                    Timer Settings
+                                </div>
+                                <div style={{paddingTop: "20px", paddingBottom: "20px"}}>
+                                    BeThere will work considering to turn on your pump. Set below:
+                                </div>
+                                <div>
+                                    <Button color="blue" circular>6h</Button>
+                                    <Button circular>8h</Button>
+                                    <Button circular>12h</Button>
+                                    <Button circular>24h</Button>
+                                </div>
+                            </div>}
 
-                {showTemperature && <Row className="content">
-                    <Col xl={12} xs={12} style={{fontSize: "20px", paddingTop: "20px"}}>
-                        Temperature Settings
-                    </Col>
-                    <Col xl={12} style={{paddingTop: "20px", paddingBottom: "20px"}}>
-                        With this mode, Be There will turn on your pump when the temperature sensor reaches the set point. Set below:
-                    </Col>
-                </Row>}
+                        {showMoisture && <div className="content">
+                            <div style={{fontSize: "20px", paddingTop: "20px"}}>
+                                Moisture Settings
+                            </div>
+                            <div style={{paddingTop: "20px", paddingBottom: "20px"}}>
+                                BeThere will turn on your pump when the moisture sensor reaches the set point. Set below:
+                            </div>
+                        </div>}
 
-            </Container>
-        </>
-            
-            
-        
+
+                        {showTemperature && <div className="content">
+                            <div xl={12} xs={12} style={{fontSize: "20px", paddingTop: "20px"}}>
+                                Temperature Settings
+                            </div>
+                            <div xl={12} style={{paddingTop: "20px", paddingBottom: "20px"}}>
+                                BeThere will turn on your pump when the temperature sensor reaches the set point. Set below:
+                            </div>
+                        </div>}
+                </Container>
+        </>         
     );
 }

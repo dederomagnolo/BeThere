@@ -1,9 +1,17 @@
 .headerTitle {
     color: #000000;
-    font-size: 40px;
+    font-size: 35px;
     padding: 30px 0 30px;
     width: 100%;
     display: flex;
-    justify-content: flex-start;
+    justify-content: center;
+}
+
+@media screen and (max-width: 425px) {
+    .headerTitle {
+        font-size: 28px;
+        justify-content: flex-start;
+        margin-left: 15px;
+    }
 }
 

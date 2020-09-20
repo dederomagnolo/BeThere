@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Col, Row, Container } from 'react-grid-system';
+import { Col, Row } from 'react-grid-system';
 import logo from '../../assets/bethere_logo.png';
+import { MenuList, Container } from './styles';
 
 export const SideMenu = () => {
     return(
-        <Col lg={3} style={{ backgroundColor:  '#339999', height: '100vh' }}>
-            <Container style={{height: '100%', color: 'white', boxShadow: '1px 3px 3px gray'}}>
+        <Container style={{ backgroundColor:  '#339999' }}>
+            <MenuList style={{color: 'white', boxShadow: '1px 3px 3px gray'}}>
                 <Row style={{ height: "100%", color: 'white', fontSize: "30px"}}>
                     <Col xl={12} xs={12} lg={12}>
                         <Row justify="center">
@@ -29,7 +30,7 @@ export const SideMenu = () => {
                         </Row>
                     </Col>
                 </Row>
-            </Container>
-      </Col>
+            </MenuList>
+      </Container>
     );
 }

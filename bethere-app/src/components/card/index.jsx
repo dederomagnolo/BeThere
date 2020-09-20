@@ -1,23 +1,27 @@
 import React from 'react';
 import { Container, Row, Col} from 'react-grid-system';
 import { Card, Icon } from 'semantic-ui-react';
+import './styles.css';
 
 
-export const MenuCard = ({iconName, label, onClick}) => {
+export const MenuCard = ({iconName, label, onClick, label2 }) => {
     return (
         <Card 
             color="teal"
             onClick={() => onClick && onClick()}
-            style={{width: '200px' , height: '200px', display: 'flex', justifyContent: 'center'}}
+            className="cardContainer"
         > 
-            <Row justify="center" style={{textAlign: "center", fontSize: "25px", color: "teal"}}>
-                <Col xl={12} xs={12}>
-                    <Icon name={iconName} />
-                </Col>
-                <Col xl={12} xs={12}>
+            <div className="cardContent">
+                <div className="labelBig">
                     {label}
-                </Col>
-            </Row>
+                </div>
+                <div style={{paddingTop: '20px'}}>
+                    <Icon name={iconName} />
+                </div>
+                {label2 && <div style={{fontSize: '15px'}}>
+                    {label2}
+                </div>}
+            </div>
         </Card>
     )
 }

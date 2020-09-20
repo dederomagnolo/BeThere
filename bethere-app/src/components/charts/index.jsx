@@ -42,11 +42,11 @@ export const Charts = () => {
         <>
             <Header title="Charts"/>
             <Container className="content">
-                Select below the chart you want:
+                <span style={{fontSize: '20px'}}>Select below the complete chart you want:</span>
                 <Card.Group style={{paddingTop: "20px"}} itemsPerRow={4}>
                     <MenuCard iconName="leaf" label="Moisture" onClick={() => displayMoistureChart()}/>
                     <MenuCard iconName="thermometer half" label="Temperature" onClick={() => displayTemperatureChart()}/>
-                    <MenuCard iconName="tint" label="Umidity" onClick={() => displayUmidityChart()}/>
+                    <MenuCard iconName="tint" label="Humidity" onClick={() => displayUmidityChart()}/>
                     <MenuCard iconName="sun" label="Luminosity" onClick={() => displayLuminosityChart()}/>
                 </Card.Group>
             </Container>
