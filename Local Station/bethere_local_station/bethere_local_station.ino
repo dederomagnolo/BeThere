@@ -72,8 +72,8 @@ void loop() {
 
   // ThingSpeak - Read Pump Status
   int pumpFlag = ThingSpeak.readFloatField(myChannelNumber, 7);
-
-  statusCode = ThingSpeak.getLastReadStatus();
+  
+  statusCode = ThingSpeak.getLastReadStatus(); // check status 
   if(statusCode == 200) {
     Serial.println("GET success");  
   } else {
@@ -169,5 +169,5 @@ void loop() {
     Serial.println("Can trigger from remote!\n");
   }
   
-  delay(2000);
+  delay(3000);
 }
