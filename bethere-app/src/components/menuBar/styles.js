@@ -9,7 +9,7 @@ export const Container = styled.div`
   @media screen and (max-width: 425px){
     position: fixed;
     width: 100%;
-    height: 80px;
+    height: 60px;
     bottom: 0;
     display: flex;
     justify-content: center;
