@@ -7,6 +7,7 @@ char ssid[] = "Satan`s Connection";
 char password[] = "tininha157";
 const char* websockets_server_host = "192.168.0.34"; // IP do servidor websocket
 const int websockets_server_port = 8080; // Porta de conexão do servidor
+using namespace websockets;
 
 // Objeto websocket client
 WebsocketsClient client;

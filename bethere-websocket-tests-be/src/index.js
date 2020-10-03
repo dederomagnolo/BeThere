@@ -1,6 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const WebSocketServer = require('websocket').server;
+/* const WebSocketServer = require('websocket').server; */
+const WebSocket = require('ws');
+var events = require('events');
+var eventEmitter = new events.EventEmitter();
+
 const app = express();
 
 const http = require('http');
@@ -10,21 +14,35 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 const server = http.createServer(app);
 
-const port = 8080;
+const port = 4000;
 
 app.get('/', (req, res) => {
-    res.send("Olar");
+    res.send("BeThere WebSocket - Home");
 })
 
 server.listen(port, () => {
-    console.log(`Server está executando na porta ${port}`);
+    console.log(`Server running in the port ${port}`);
+});
+
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on('connection' , ws => {
+    app.post('/send', function (req, res) {
+        res.send("command sent!");
+        ws.send(req.body.message);
+     });
+
+    ws.on('message', message => {
+        console.log(`Received message => ${message}`)
+      })
+    ws.send('I touched the server!');
 });
 
 
-
-wsServer = new WebSocketServer({
+/* wsServer = new WebSocketServer({
     httpServer: server
   });
+
 
 wsServer.on('request', (request) => {
     //Estado do relé: false para desligado e true para ligado
@@ -53,7 +71,7 @@ wsServer.on('request', (request) => {
         //Remove o intervalo de envio de estado
         clearInterval(interval);
     });
-});
+}); */
 
 
 
