@@ -41,23 +41,18 @@ unsigned long beginCommandTimer = 0;
 unsigned long interval = 900000;
 float internalTemperature = 0;
 float internalHumidity = 0;
-float externalHumidity = 0;
-float externalTemperature = 0;
+volatile byte watchdogCount = 0;
 int statusCode = 0;
-float humidity = 0;
-float humidity2 = 0;
-float temperature = 0;
-float temperature2 = 0;
 
-//void IRSwatchdog() 
-//{
-//  watchdogCount ++;
-//  if (watchdogCount == 5)
-//  {
-//    Serial.println("Ops! travei...reiniciando");
-//    ESP.reset();
-//  }
-//}
+void IRSwatchdog() 
+{
+  watchdogCount ++;
+  if (watchdogCount == 5)
+  {
+    Serial.println("Ops! travei...reiniciando");
+    ESP.reset();
+  }
+}
 
 void setup() {
   ESP.eraseConfig();
@@ -66,7 +61,7 @@ void setup() {
   dht.begin();
   dht2.begin();
   dht3.begin();
-  
+  Serial.begin(19200);
 //  lcd.begin(16,2);
 //  yield();
 //  lcd.init();
@@ -78,12 +73,12 @@ void setup() {
 //  lcd.setCursor(0, 0);
   
   WiFi.begin(ssid, password);
-  Serial.begin(19200);
-
+ 
   while(WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.println("...connecting!"); 
     yield();
+    ESP.wdtFeed();
   }
   Serial.println("BeThere connected! :D");
   ThingSpeak.begin(client);
@@ -93,13 +88,11 @@ void setup() {
 
 void loop() {
   //Imprime o valor do contador do watchdog
-  // Serial.printf("watchdogCount= %d\n", watchdogCount);
+  Serial.printf("watchdogCount= %d\n", watchdogCount);
   //Zera o contador do watchdog
-  // watchdogCount = 0;
+  watchdogCount = 0;
   
   Serial.println(ESP.getFreeHeap());
-  Serial.println(WiFi.status());
-  yield();
   
     if(WiFi.status() != WL_CONNECTED) {
       Serial.println("Connection lost!");
@@ -112,40 +105,40 @@ void loop() {
   // lcd.noBacklight();
   
   // ThingSpeak - Read Pump Status
-//  pumpFlag = ThingSpeak.readFloatField(myChannelNumber, 7);
-//  yield();
-//  statusCode = ThingSpeak.getLastReadStatus(); // check status
-//  yield();
+  pumpFlag = ThingSpeak.readFloatField(myChannelNumber, 7);
+  client.flush();
+  Serial.println("read pump");
+  statusCode = ThingSpeak.getLastReadStatus(); // check status
+  client.flush(); 
+  Serial.println("last status ok");
   
   if(statusCode == 200) {
     Serial.println("GET success");  
-    yield();
   } else {
     Serial.println("Error to get the pump status");  
-    yield();
   }
+  Serial.println("check response ok");
   
   if(pumpFlag == 1) {
     Serial.println("Pump on!");
     digitalWrite(pumpInputRelay, LOW); // activate pump
-    yield();
   } else {
     digitalWrite(pumpInputRelay, HIGH); // deactivate pump
     Serial.println("Pump off!");
-    yield();
   }
+  Serial.println("update pump ok");
   // Read humidity and temperature from DHT22
-  humidity = dht.readHumidity();
-  temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
 
-  humidity2 = dht2.readHumidity();
-  temperature2 = dht2.readTemperature();
+  float humidity2 = dht2.readHumidity();
+  float temperature2 = dht2.readTemperature();
 
   internalTemperature = (temperature + temperature2)/2;
   internalHumidity = (humidity + humidity2)/2;
 
-  externalHumidity = dht3.readHumidity();
-  externalTemperature = dht3.readTemperature();
+  float externalHumidity = dht3.readHumidity();
+  float externalTemperature = dht3.readTemperature();
 
   // Write the measures on LCD 
 //  lcd.setCursor(0, 0);
@@ -167,11 +160,11 @@ void loop() {
 //  lcd.print(externalTemperature);
   
   // Just for debug - print in serial monitor
-//  Serial.println("H:" + String(humidity) + "T:" + String(temperature));
-//  Serial.println("H2:" + String(humidity2) + "T2:" + String(temperature2));
-//  Serial.println("H3:" + String(externalHumidity) + "T3:" + String(externalTemperature));
-//  Serial.println("Media T1 T2:" + String(internalTemperature));
-//  Serial.println("Media H1 H2:" + String(internalHumidity));  
+  Serial.println("H:" + String(humidity) + "T:" + String(temperature));
+  Serial.println("H2:" + String(humidity2) + "T2:" + String(temperature2));
+  Serial.println("H3:" + String(externalHumidity) + "T3:" + String(externalTemperature));
+  Serial.println("Media T1 T2:" + String(internalTemperature));
+  Serial.println("Media H1 H2:" + String(internalHumidity));  
   
   if(millis() - beginCommandTimer > interval){
       Serial.println("Sending data..."); 
@@ -180,20 +173,18 @@ void loop() {
       ThingSpeak.setField(4, internalTemperature);
       ThingSpeak.setField(5, externalHumidity);
       ThingSpeak.setField(6, externalTemperature);
-//      ThingSpeak.setField(7, pumpFlag);
-      yield();
+      ThingSpeak.setField(7, pumpFlag);
      
       // ThingSpeak - Write fields
       int response = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
-      yield();
+      client.flush();
       // Check status response
       if (response == 200){
         Serial.println("Data sent with success!");
         beginCommandTimer = millis();
-        yield();
+        
       } else{
         Serial.println("Coneection Error: " + String(response));
-        yield();
       }
   }
 
@@ -201,6 +192,5 @@ void loop() {
 //    Serial.println("Can trigger from remote!\n");
 //  }
 //  
-  delay(16000);
-  yield();
+  delay(10000);
 }
