@@ -11,6 +11,9 @@ import { ResponsiveLine } from '@nivo/line';
 import { setColorId, isOdd, setMeasureId } from './utils';
 
 const base_channel_url = "https://api.thingspeak.com/channels/695672"
+
+const bethereUrl = "http://localhost:4000";
+
 const initialState = {
     measures: { 
         internalHumidity: '' , 
@@ -46,8 +49,9 @@ export const Dashboard = () => {
 
     const updateDataFromRemote = async () => {
         try{
+            const pumpStatusResponse = await api.get(`${bethereUrl}/measures/pumpstatus`);
             const lastFeed = await api.get(`${base_channel_url}/feeds/last.json`);
-            const pumpField = _.get(lastFeed, 'data.field7');
+            const lastPumpStatus = _.get(pumpStatusResponse, 'data.value');
 
             const internalHumidity = _.get(lastFeed, 'data.field3');
             const internalTemperature = _.get(lastFeed, 'data.field4');
@@ -62,7 +66,7 @@ export const Dashboard = () => {
             }
             setMeasures(measuresFromRemote);
 
-            if(pumpField == 1) {
+            if(lastPumpStatus == 1) {
                 setPumpFlag(true);
             } 
         } catch(err) {
@@ -119,24 +123,24 @@ export const Dashboard = () => {
         
     const updatePump = async () => { 
         try{
-            const feedsResponse = await api.get("https://api.thingspeak.com/channels/695672/feeds/last.json");
+            const pumpStatusReponse = await api.get(`${bethereUrl}/measures/pumpstatus`);
             setBlockButtonFlag(true);
-            const pumpStatus = _.get(feedsResponse, 'data.field7');
-            if(pumpStatus == 1) {
-                await api.get(null, {params: {
-                    api_key: 'ZY113X3ZSZG96YC8',
-                    field7: 0
-                } });
+            const pumpStatus = _.get(pumpStatusReponse, 'data.value');
+            if(pumpStatus === "1") {
+                await api.post(`${bethereUrl}/send`, {
+                    measureName: "Pump Status",
+                    value: "0"
+                });
                 setPumpFlag(false);
             } else {
-                await api.get(null, {params: {
-                    api_key: 'ZY113X3ZSZG96YC8',
-                    field7: 1
-                } });   
+                await api.post(`${bethereUrl}/send`, {
+                    measureName: "Pump Status",
+                    value: "1"
+                });  
                 setPumpFlag(true);
             }
             
-            setTimeLeft(16);
+            setTimeLeft(11);
         } catch(err) {
           console.log(err);
         }    
@@ -145,7 +149,6 @@ export const Dashboard = () => {
     return (
         <Container style={{height: '100%'}}>
             <Header title="Dashboard"/>
-            {console.log(chartData)}
             <Container>
                 <Col xl={12}>
                     <span style={{fontSize: "20px"}}>Hello! Your garden looks good today:</span>

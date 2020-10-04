@@ -1,24 +1,22 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-/* const WebSocketServer = require('websocket').server; */
 const WebSocket = require('ws');
-var events = require('events');
-var eventEmitter = new events.EventEmitter();
-
 const app = express();
-
 const http = require('http');
-const path = require("path");
+const cors = require('cors');
+const Measure = require('./app/models/measure');
 
-app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-const server = http.createServer(app);
-
-const port = 4000;
-
+app.use(bodyParser.urlencoded({ extended: false}));
+app.use(cors());
 app.get('/', (req, res) => {
     res.send("BeThere WebSocket - Home");
 })
+
+const server = http.createServer(app); // is this necessary? re-check
+const port = 4000;
+
+require('./app/controllers/index')(app); //importa controllers
 
 server.listen(port, () => {
     console.log(`Server running in the port ${port}`);
@@ -26,52 +24,18 @@ server.listen(port, () => {
 
 const wss = new WebSocket.Server({ port: 8080 });
 
-wss.on('connection' , ws => {
-    app.post('/send', function (req, res) {
-        res.send("command sent!");
-        ws.send(req.body.message);
-     });
+wss.on('connection' , async ws => {
+    app.post('/send', async function (req, res) {
+        const measure = await Measure.create(req.body);
+        res.send(measure);
+        ws.send(req.body.value);
+    });
 
     ws.on('message', message => {
         console.log(`Received message => ${message}`)
-      })
+    });
+
+    const lastMeasure = await Measure.find( { measureName: "Pump Status"}).sort( { _id: -1 }).limit(1);
+    console.log(lastMeasure);
     ws.send('I touched the server!');
 });
-
-
-/* wsServer = new WebSocketServer({
-    httpServer: server
-  });
-
-
-wsServer.on('request', (request) => {
-    //Estado do relé: false para desligado e true para ligado
-    let state = false;
-
-    //Aceita a conexão do client
-    let client = request.accept(null, request.origin);
-
-    //Chamado quando o client envia uma mensagem
-    client.on('message', (message) => {
-        //Se é uma mensagem string utf8
-        if (message.type === 'utf8') {
-            console.log(message.utf8Data);
-        }
-    });
-        //Cria uma função que será executada a cada 1 segundo para enviar o estado do relé
-    let interval = setInterval(() => {
-        //Envia para o client a mensagem dependendo do estado atual da variável state
-        client.sendUTF(state ? "ON" : "OFF");
-        state = !state;
-    }, 1000);//Tempo 1 seg
-
-        //Chamado quando a conexão com o client é fechada
-    client.on('close', () => {
-        console.log("Conexão fechada");
-        //Remove o intervalo de envio de estado
-        clearInterval(interval);
-    });
-}); */
-
-
-

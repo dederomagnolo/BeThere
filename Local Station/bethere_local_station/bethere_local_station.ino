@@ -4,9 +4,10 @@
 #include <WiFiClient.h>
 #include <Wire.h>
 #include "SPI.h"
-//#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal_I2C.h>
 #include <ThingSpeak.h>
-#include <Ticker.h>
+#include <ArduinoWebsockets.h>
+
 // Pins definition
 #define pinDHT 12 //D6
 #define pinDHT2 13 //D7
@@ -14,64 +15,65 @@
 #define typeDHT DHT22
 #define pumpInputRelay 2
 
+using namespace websockets;
+
 // Object declarations
 WiFiClient client;
+WebsocketsClient wsclient;
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
 DHT dht(pinDHT, typeDHT);
 DHT dht2(pinDHT2, typeDHT);
 DHT dht3(pinDHT3, typeDHT);
-//Ticker secondTicker;
-//LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 // Network credentials
 char ssid[] = "Satan`s Connection";
 char password[] = "tininha157";
 //char ssid[] = "iPhone de Débora";
 //char password[] = "texas123";
-//char ssid[] = "Nayane";
-//char password[] = "96066499nd";
 
 // Thingspeak credentials
-// visualization channel
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
+// websocket infos
+const char* websocketServerHost = "192.168.0.34"; 
+const int websocketServerPort = 8080; 
+
 // Variables declaration
-int pumpFlag = 0;
+int pumpFlag = 0; 
 unsigned long beginCommandTimer = 0;
 unsigned long interval = 900000;
 float internalTemperature = 0;
 float internalHumidity = 0;
-volatile byte watchdogCount = 0;
 int statusCode = 0;
 
-void IRSwatchdog() 
-{
-  watchdogCount ++;
-  if (watchdogCount == 5)
-  {
-    Serial.println("Ops! travei...reiniciando");
-    ESP.reset();
-  }
-}
-
 void setup() {
+  // erase every esp config before start
   ESP.eraseConfig();
+
+  // initialize output for relay and put it high
   pinMode(pumpInputRelay, OUTPUT);
-  digitalWrite(pumpInputRelay, HIGH); //bomba desligada
+  digitalWrite(pumpInputRelay, LOW); //bomba desligada
+
+  // begin DHT sensors
   dht.begin();
   dht2.begin();
   dht3.begin();
+
+  // begin serial port
   Serial.begin(19200);
-//  lcd.begin(16,2);
-//  yield();
-//  lcd.init();
-//  lcd.backlight();
-//  lcd.setCursor(0, 0);
-//  delay(1000);
-//  lcd.print("Hello!");
-//  delay(1000);
-//  lcd.setCursor(0, 0);
   
+  lcd.begin(16,2);
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  delay(500);
+  lcd.print("Hello!");
+  delay(500);
+  lcd.setCursor(0, 0);
+
+  // begin wifi and try to connect
   WiFi.begin(ssid, password);
  
   while(WiFi.status() != WL_CONNECTED) {
@@ -81,91 +83,109 @@ void setup() {
     ESP.wdtFeed();
   }
   Serial.println("BeThere connected! :D");
-  ThingSpeak.begin(client);
 
-//  secondTicker.attach(1, IRSwatchdog);
+  // connect with websocket server
+  bool connected = wsclient.connect(websocketServerHost, websocketServerPort, "/");
+
+  if(connected) {
+    Serial.println("Connected with BeThere websocket server!");
+    wsclient.send("Olar");
+  } else {
+    Serial.println("Not Connected!");
+    return;
+  }
+
+  // callback where the messages are received
+    wsclient.onMessage([&](WebsocketsMessage message){        
+        Serial.print("Message from server: ");
+        Serial.println(message.data());
+
+        // change state
+        if(message.data() == "1")
+            digitalWrite(pumpInputRelay, LOW);
+        else {
+          digitalWrite(pumpInputRelay, HIGH);
+        }    
+    });
+  
+  ThingSpeak.begin(client);
 }
 
 void loop() {
-  //Imprime o valor do contador do watchdog
-  Serial.printf("watchdogCount= %d\n", watchdogCount);
-  //Zera o contador do watchdog
-  watchdogCount = 0;
-  
-  Serial.println(ESP.getFreeHeap());
-  
-    if(WiFi.status() != WL_CONNECTED) {
-      Serial.println("Connection lost!");
-      WiFi.reconnect();
-      delay(1000);
-      yield();
-      ESP.wdtFeed();
-    }
-  statusCode = 0; // set status to 0
   // lcd.noBacklight();
-  
-  // ThingSpeak - Read Pump Status
-  pumpFlag = ThingSpeak.readFloatField(myChannelNumber, 7);
-  client.flush();
-  Serial.println("read pump");
-  statusCode = ThingSpeak.getLastReadStatus(); // check status
-  client.flush(); 
-  Serial.println("last status ok");
-  
-  if(statusCode == 200) {
-    Serial.println("GET success");  
-  } else {
-    Serial.println("Error to get the pump status");  
+
+  // wi fi recover
+  if(WiFi.status() != WL_CONNECTED) {
+    Serial.println("Connection lost!");
+    WiFi.reconnect();
+    delay(1000);
+    yield();
+    ESP.wdtFeed();
   }
-  Serial.println("check response ok");
-  
-  if(pumpFlag == 1) {
-    Serial.println("Pump on!");
-    digitalWrite(pumpInputRelay, LOW); // activate pump
+
+  // connection with websocket recover
+  if(wsclient.available()) {
+    wsclient.poll();
+    yield();
   } else {
-    digitalWrite(pumpInputRelay, HIGH); // deactivate pump
+    Serial.println("reconnecting to websocket server...");
+    wsclient.send("Be There is alive!"); 
+    wsclient.connect(websocketServerHost, websocketServerPort, "/");
+  }
+      
+  if(digitalRead(pumpInputRelay) == LOW) {
+    Serial.println("Pump on!");
+  } else {
     Serial.println("Pump off!");
   }
-  Serial.println("update pump ok");
-  // Read humidity and temperature from DHT22
+  
+  // Read humidity and temperature from DHT22 sensors
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
-
   float humidity2 = dht2.readHumidity();
   float temperature2 = dht2.readTemperature();
-
-  internalTemperature = (temperature + temperature2)/2;
-  internalHumidity = (humidity + humidity2)/2;
-
   float externalHumidity = dht3.readHumidity();
   float externalTemperature = dht3.readTemperature();
 
+  // calculate the mean for internal sensors
+  internalTemperature = (temperature + temperature2)/2;
+  internalHumidity = (humidity + humidity2)/2;
+
   // Write the measures on LCD 
-//  lcd.setCursor(0, 0);
-//  lcd.print("H:");
-//  lcd.setCursor(2, 0);
-//  lcd.print(internalHumidity);
-//  lcd.setCursor(0 ,1);
-//  lcd.print("T:");
-//  lcd.setCursor(2 ,1);
-//  lcd.print(internalTemperature);
-//
-//  lcd.setCursor(8, 0);
-//  lcd.print("H2:");
-//  lcd.setCursor(11, 0);
-//  lcd.print(externalHumidity);
-//  lcd.setCursor(8 ,1);
-//  lcd.print("T2:");
-//  lcd.setCursor(11 ,1);
-//  lcd.print(externalTemperature);
+  lcd.setCursor(0, 0);
+  lcd.print("H:");
+  lcd.setCursor(2, 0);
+  lcd.print(internalHumidity);
+  lcd.setCursor(0 ,1);
+  lcd.print("T:");
+  lcd.setCursor(2 ,1);
+  lcd.print(internalTemperature);
+  delay(200);
   
+  lcd.setCursor(8, 0);
+  lcd.print("H2:");
+  lcd.setCursor(11, 0);
+  lcd.print(externalHumidity);
+  lcd.setCursor(8 ,1);
+  lcd.print("T2:");
+  lcd.setCursor(11 ,1);
+  lcd.print(externalTemperature);
+  delay(200);
+
   // Just for debug - print in serial monitor
-  Serial.println("H:" + String(humidity) + "T:" + String(temperature));
-  Serial.println("H2:" + String(humidity2) + "T2:" + String(temperature2));
-  Serial.println("H3:" + String(externalHumidity) + "T3:" + String(externalTemperature));
-  Serial.println("Media T1 T2:" + String(internalTemperature));
-  Serial.println("Media H1 H2:" + String(internalHumidity));  
-  
+  //  Serial.println("H:" + String(humidity) + "T:" + String(temperature));
+  //  Serial.println("H2:" + String(humidity2) + "T2:" + String(temperature2));
+  //  Serial.println("H3:" + String(externalHumidity) + "T3:" + String(externalTemperature));
+  //  Serial.println("Media T1 T2:" + String(internalTemperature));
+  //  Serial.println("Media H1 H2:" + String(internalHumidity));  
+
+  // TESTING: SEND MEASURES TO WEBSOCKET SERVER
+  //  String measures = "H1:" + String(internalHumidity) + "T1:" +String(internalTemperature) + "H2:" + String(externalHumidity) + "T2:" + String(externalTemperature);
+  //  if(wsclient.available()) {
+  //    wsclient.send(measures);
+  //    yield();
+  //  }
+
   if(millis() - beginCommandTimer > interval){
       Serial.println("Sending data..."); 
       // ThingSpeak - Set fields
@@ -173,7 +193,6 @@ void loop() {
       ThingSpeak.setField(4, internalTemperature);
       ThingSpeak.setField(5, externalHumidity);
       ThingSpeak.setField(6, externalTemperature);
-      ThingSpeak.setField(7, pumpFlag);
      
       // ThingSpeak - Write fields
       int response = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
@@ -187,10 +206,5 @@ void loop() {
         Serial.println("Coneection Error: " + String(response));
       }
   }
-
-//  if(millis() - beginCommandTimer > 15000) {
-//    Serial.println("Can trigger from remote!\n");
-//  }
-//  
   delay(10000);
 }

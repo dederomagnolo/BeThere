@@ -10,7 +10,7 @@ const int websockets_server_port = 8080; // Porta de conexão do servidor
 using namespace websockets;
 
 // Objeto websocket client
-WebsocketsClient client;
+WebsocketsClient wsclient;
 
 void setup() 
 {
@@ -28,18 +28,18 @@ void setup()
     Serial.println("Connected to Wifi, Connecting to server.");
 
     // try to connect to web socket server
-    bool connected = client.connect(websockets_server_host, websockets_server_port, "/");
+    bool connected = wsclient.connect(websockets_server_host, websockets_server_port, "/");
 
     if(connected) {
         Serial.println("Connected!");
-        client.send("Olar");
+        wsclient.send("Olar");
     } else {
         Serial.println("Not Connected!");
         return;
     }
     
     // callback where the messages are received
-    client.onMessage([&](WebsocketsMessage message){        
+    wsclient.onMessage([&](WebsocketsMessage message){        
         Serial.print("Got Message: ");
         Serial.println(message.data());
 
@@ -55,8 +55,9 @@ void setup()
 void loop() 
 {
     //  listen to websocket for new messages
-    if(client.available()) 
-        client.poll();
+    if(wsclient.available())
+        wsclient.send("testando!"); 
+        wsclient.poll();
     delay(300);
 }
 
