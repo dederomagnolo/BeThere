@@ -15,4 +15,8 @@ export const Wrapper = styled.div `
   display: flex;
   flex-direction: column;
   overflow: auto;
+
+  @media screen and (max-width: 425px){ 
+    height: calc(100vh - 60px);
+  }
 `;

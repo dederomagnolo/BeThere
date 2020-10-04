@@ -8,7 +8,6 @@ const router = express.Router();
 
 router.get('/pumpstatus' , async (req, res) => {
     const lastMeasure = await Measure.find( { measureName: "Pump Status"}).sort( { _id: -1 }).limit(1);
-
     res.send(lastMeasure[0]);
 })
 

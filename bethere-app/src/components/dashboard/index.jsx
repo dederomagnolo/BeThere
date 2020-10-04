@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Col } from 'react-grid-system';
 import { Header } from '../header';
-import { Card } from 'semantic-ui-react';
-import { MenuCard } from '../card';
 import Toggle from 'react-styled-toggle';
 import api from '../../services';
 import * as _ from 'lodash';
 import moment from 'moment';
 import { ResponsiveLine } from '@nivo/line'; 
 import { setColorId, isOdd, setMeasureId } from './utils';
+import {NewCard} from '../newCard';
+import {Cards} from './styles';
 
 const base_channel_url = "https://api.thingspeak.com/channels/695672"
-
 const bethereUrl = "http://localhost:4000";
 
 const initialState = {
@@ -147,19 +145,24 @@ export const Dashboard = () => {
     }
 
     return (
-        <Container style={{height: '100%'}}>
+        <div style={{height: "100%"}}>
             <Header title="Dashboard"/>
-            <Container>
-                <Col xl={12}>
-                    <span style={{fontSize: "20px"}}>Hello! Your garden looks good today:</span>
-                </Col>
-                <Card.Group style={{paddingTop: "20px"}} itemsPerRow={4}>
-                    <MenuCard iconName="tint" label={`${measures.internalHumidity}`} label2="Internal Humidity"/>
-                    <MenuCard iconName="thermometer half" label={`${measures.internalTemperature}`} label2="Internal Temperature"/>
-                    <MenuCard iconName="tint" label={`${measures.externalHumidity}`} label2="External Humidity"/>
-                    <MenuCard iconName="thermometer half" label={`${measures.externalTemperature}`} label2="External Temperature"/>
-                </Card.Group>
-
+            <div>
+                <span style={{fontSize: "20px"}}>Hello! Your garden looks good today:</span>
+                <Cards>
+                    <NewCard 
+                        label={"Temperature (°C)"} 
+                        icon={"thermometer half"} 
+                        internalMeasure={measures.internalTemperature} 
+                        externalMeasure={measures.externalTemperature} 
+                    />
+                    <NewCard 
+                        label={"Humidity (%)"} 
+                        icon={"tint"} 
+                        internalMeasure={measures.internalHumidity} 
+                        externalMeasure={measures.externalHumidity} 
+                    />
+                </Cards>
                 <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center', paddingTop: '20px'}}>
                     <div style={{fontSize: '20px', paddingRight: '20px'}}>
                         Pump
@@ -168,10 +171,10 @@ export const Dashboard = () => {
                     <div style={{marginLeft: '10px'}}>{blockButtonFlag ? `Wait ${timeLeft} seconds to send another command` : "Available!"}</div>
                 </div>
 
-                <div style={{width: '100%' , height: '300px'}}>
+                <div style={{width: '85%' , height: '200px'}}>
                     <ResponsiveLine
                         data={chartData}
-                        margin={{ top: 20, right: 110, bottom: 50, left: 60 }}
+                        margin={{ top: 10, right: 10, bottom: 50, left: 10 }}
                         xScale={{ type: 'point' }}
                         yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: false, reverse: false }}
                         axisTop={null}
@@ -180,7 +183,7 @@ export const Dashboard = () => {
                             orient: 'bottom',
                             tickSize: 5,
                             tickPadding: 5,
-                            tickRotation: 40,
+                            tickRotation: 50,
                             legendOffset: 20,
                             legendPosition: 'middle'
                         }}
@@ -203,7 +206,7 @@ export const Dashboard = () => {
                         useMesh={true}
                         legends={[
                             {
-                                anchor: 'bottom-right',
+                                anchor: 'top',
                                 direction: 'column',
                                 justify: false,
                                 translateX: 100,
@@ -229,9 +232,8 @@ export const Dashboard = () => {
                         ]}
                     />
 
-                </div>
-                
-            </Container>
-        </Container>
+                </div>     
+            </div>
+        </div>
     );
 }
