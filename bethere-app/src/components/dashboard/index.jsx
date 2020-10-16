@@ -4,10 +4,10 @@ import Toggle from 'react-styled-toggle';
 import api from '../../services';
 import * as _ from 'lodash';
 import moment from 'moment';
-import { ResponsiveLine } from '@nivo/line'; 
 import { setColorId, isOdd, setMeasureId } from './utils';
 import {NewCard} from '../newCard';
-import {Cards} from './styles';
+import {Cards, MainContainer} from './styles';
+import {Graph} from './graph';
 
 const base_channel_url = "https://api.thingspeak.com/channels/695672"
 const bethereUrl = "http://localhost:4000";
@@ -27,13 +27,8 @@ export const Dashboard = () => {
     const [timeLeft, setTimeLeft] = useState(null);
     const [measures, setMeasures] = useState(initialState.measures);
     const [chartData, setChartData] = useState([]);
-    
-    const today = moment().format('YYYY-MM-DD');
-    const nextDay = moment().add(1, 'days').format('YYYY-MM-DD');
-
-    const queryStart = `${today}%2000:00:00`;
-    const queryEnd = `${nextDay}%2000:00:00`;
-
+    const [temperatureData, setTemperatureData] = useState([]);
+    const [humidityData, setHumidityData] = useState([]);
     // Week Logics
     /* const lastWeekStartDate = moment().subtract(5, 'days').format("YYYY-MM-DD"); */
     /* const queryStart = `${lastWeekStartDate}%2000:00:00`; */
@@ -72,39 +67,57 @@ export const Dashboard = () => {
         }
     }
 
-    const updateFields = async (fieldNumber) => {
-        try {
-            const response = await api.get(`${base_channel_url}/fields/${fieldNumber}.json?start=${queryStart}&end=${queryEnd}`);  // 
-            const weekFeed = _.get(response, 'data.feeds');
-            const weekFeedSlice = _.slice(weekFeed, 50);
-            console.log(weekFeedSlice);
-            const data = [];
-            _.each(weekFeed, (entry, index) => {
-                if(isOdd(index)) {
-                    const created_at = _.get(entry, 'created_at');
-                    const fieldMeasure = _.get(entry, `field${fieldNumber}`);
-                    data.push({
-                        "x": moment(created_at).format('hh:mm:ss'),
-                        "y": fieldMeasure && fieldMeasure !== "nan" ? Number(fieldMeasure).toFixed(2) : 31.8
-                    });
-                }
-            });
-
-            setChartData((chartData) => [...chartData, {
-                "id": setMeasureId(fieldNumber),
-                "color": setColorId(fieldNumber),
-                "data": data
-            }]);
-        } catch(err) {
-            console.log(err);
-        }
-    }
-
     useEffect(() => {
         updateDataFromRemote();
+
+        const updateFields = async (fieldNumber) => {
+            const today = moment().format('YYYY-MM-DD');
+            const nextDay = moment().add(1, 'days').format('YYYY-MM-DD');
+            const queryStart = `${today}%2000:00:00`;
+            const queryEnd = `${nextDay}%2000:00:00`;
+
+            try {
+                const response = await api.get(`${base_channel_url}/fields/${fieldNumber}.json?start=${queryStart}&end=${queryEnd}`);  // 
+                const weekFeed = _.get(response, 'data.feeds');
+                const weekFeedSlice = _.slice(weekFeed, 50);
+                const data = [];
+                _.each(weekFeed, (entry, index) => {
+                    if(isOdd(index)) {
+                        const created_at = _.get(entry, 'created_at');
+                        const fieldMeasure = _.get(entry, `field${fieldNumber}`);
+                        data.push({
+                            "x": moment(created_at).format('hh:mm:ss'),
+                            "y": fieldMeasure && fieldMeasure !== "nan" ? Number(fieldMeasure).toFixed(2) : 31.8
+                        });
+                    }
+                });
+    
+                setChartData((chartData) => [...chartData, {
+                    "id": setMeasureId(fieldNumber),
+                    "color": setColorId(fieldNumber),
+                    "data": data
+                }]);
+            } catch(err) {
+                console.log(err);
+            }
+        }
+
         updateFields(4);
         updateFields(6);
+/*         updateFields(3);
+        updateFields(5); */
+
     }, []);
+
+    useEffect(() => {
+        console.log(chartData);
+        const temperatureChartData = [chartData[0], chartData[1]];
+/*         const humidityChartData = [chartData[2], chartData[3]];
+        console.log(temperatureChartData); */
+        console.log(temperatureChartData);
+        setTemperatureData(temperatureChartData);
+        /* setHumidityData(humidityChartData); */
+    }, [chartData])
 
     useEffect(() => {
         if(timeLeft === 0){
@@ -145,10 +158,10 @@ export const Dashboard = () => {
     }
 
     return (
-        <div style={{height: "100%"}}>
+        <MainContainer>
             <Header title="Dashboard"/>
             <div>
-                <span style={{fontSize: "20px"}}>Hello! Your garden looks good today:</span>
+                {/* <span style={{fontSize: "20px"}}>Hello! Your garden looks good today:</span> */}
                 <Cards>
                     <NewCard 
                         label={"Temperature (°C)"} 
@@ -162,78 +175,30 @@ export const Dashboard = () => {
                         internalMeasure={measures.internalHumidity} 
                         externalMeasure={measures.externalHumidity} 
                     />
-                </Cards>
-                <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center', paddingTop: '20px'}}>
-                    <div style={{fontSize: '20px', paddingRight: '20px'}}>
-                        Pump
-                    </div>
-                    <Toggle backgroundColorChecked="#3bea64" disabled={blockButtonFlag} checked={pumpFlag} onChange={() => updatePump()}/>
-                    <div style={{marginLeft: '10px'}}>{blockButtonFlag ? `Wait ${timeLeft} seconds to send another command` : "Available!"}</div>
-                </div>
-
-                <div style={{width: '85%' , height: '200px'}}>
-                    <ResponsiveLine
-                        data={chartData}
-                        margin={{ top: 10, right: 10, bottom: 50, left: 10 }}
-                        xScale={{ type: 'point' }}
-                        yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: false, reverse: false }}
-                        axisTop={null}
-                        axisRight={null}
-                        axisBottom={{
-                            orient: 'bottom',
-                            tickSize: 5,
-                            tickPadding: 5,
-                            tickRotation: 50,
-                            legendOffset: 20,
-                            legendPosition: 'middle'
-                        }}
-                        axisLeft={{
-                            orient: 'left',
-                            tickSize: 5,
-                            tickPadding: 5,
-                            tickRotation: 0,
-                            legend: 'measure',
-                            legendOffset: -40,
-                            legendPosition: 'middle'
-                        }}
-                        colors={{ scheme: 'nivo' }}
-                        pointSize={2}
-                        pointColor={{ theme: 'background' }}
-                        pointBorderWidth={8}
-                        pointBorderColor={{ from: 'serieColor' }}
-                        pointLabel="y"
-                        pointLabelYOffset={-10}
-                        useMesh={true}
-                        legends={[
-                            {
-                                anchor: 'top',
-                                direction: 'column',
-                                justify: false,
-                                translateX: 100,
-                                translateY: 0,
-                                itemsSpacing: 0,
-                                itemDirection: 'left-to-right',
-                                itemWidth: 80,
-                                itemHeight: 20,
-                                itemOpacity: 0.75,
-                                symbolSize: 12,
-                                symbolShape: 'circle',
-                                symbolBorderColor: 'rgba(0, 0, 0, .5)',
-                                effects: [
-                                    {
-                                        on: 'hover',
-                                        style: {
-                                            itemBackground: 'rgba(0, 0, 0, .03)',
-                                            itemOpacity: 1
-                                        }
-                                    }
-                                ]
+                    <NewCard 
+                        label={"Pump Control"} 
+                        icon={"cog"}
+                        pump={true}
+                        children={
+                            <div>
+                                <Toggle 
+                                    backgroundColorChecked="#3bea64" 
+                                    disabled={blockButtonFlag} 
+                                    checked={pumpFlag} 
+                                    onChange={() => updatePump()}
+                                />
+                                <div>{blockButtonFlag ? `Wait ${timeLeft} seconds to send another command` : "Available!"}</div>
+                            </div>
                             }
-                        ]}
-                    />
-
-                </div>     
+                    >
+                    </NewCard>
+                </Cards>
+                {chartData.length > 0 && temperatureData.length > 0 && 
+                    <>
+                        <Graph chartData={chartData}/>
+                        {/* <Graph chartData={humidityData} /> */}
+                    </>}
             </div>
-        </div>
+        </MainContainer>
     );
 }

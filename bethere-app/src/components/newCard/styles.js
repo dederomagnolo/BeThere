@@ -1,8 +1,8 @@
 import styled from 'styled-components';
 
 export const CardContainer = styled.div`
-    width: 300px;
-    height: 150px; 
+    width: 240px;
+    height: 130px; 
     box-shadow: 0 0 0 1px #d4d4d5, 0 2px 0 0 #00b5ad, 0 1px 3px 0 #d4d4d5;
     border-radius: 3px;
     background: var(--white);
@@ -10,6 +10,10 @@ export const CardContainer = styled.div`
     align-items: center;
     justify-content: center;
     margin: 5px;
+
+    @media screen and (max-width: 425px){ 
+        width: 100%;
+    }
 `
 
 export const InnerCard = styled.div`
@@ -27,7 +31,6 @@ export const CardLabel = styled.div`
 export const CardContent = styled.div`
     display: flex;
     justify-content: space-between;
-    padding-top: 15px;
     min-width: 230px;
 `
 
@@ -48,5 +51,5 @@ export const MeasureContainer = styled.div`
 
 export const MeasureLabel = styled.div`
     font-size: 14px;
-    padding-bottom: 10px;
+    padding-bottom: 25px;
 `

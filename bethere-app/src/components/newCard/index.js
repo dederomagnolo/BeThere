@@ -10,7 +10,7 @@ import {
 } from './styles';
 import { Icon } from 'semantic-ui-react';
 
-export const NewCard = ({label, icon, internalMeasure, externalMeasure}) => {
+export const NewCard = ({label, icon, internalMeasure, externalMeasure, pump, children}) => {
 
     return(
         <CardContainer>
@@ -20,18 +20,21 @@ export const NewCard = ({label, icon, internalMeasure, externalMeasure}) => {
                     <div>{label}</div>
                 </CardLabel>
                 <CardContent>
-                    <CardColumn>
-                        <MeasureLabel>Internal</MeasureLabel>
-                        <MeasureContainer>
-                            <div>{internalMeasure}</div>
-                        </MeasureContainer>
-                    </CardColumn>
-                    <CardColumn>
-                        <MeasureLabel>External</MeasureLabel>
-                        <MeasureContainer>
-                            <div>{externalMeasure}</div>
-                        </MeasureContainer>
-                    </CardColumn>
+                    {!pump ? 
+                        <>
+                            <CardColumn>
+                                <MeasureLabel>Internal</MeasureLabel>
+                                <MeasureContainer>
+                                    <div>{internalMeasure}</div>
+                                </MeasureContainer>
+                            </CardColumn>
+                            <CardColumn>
+                                <MeasureLabel>External</MeasureLabel>
+                                <MeasureContainer>
+                                    <div>{externalMeasure}</div>
+                                </MeasureContainer>
+                            </CardColumn>
+                        </> : <CardColumn>{children}</CardColumn>}
                 </CardContent>
             </InnerCard>
         </CardContainer>

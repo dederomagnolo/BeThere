@@ -1,41 +1,47 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const WebSocket = require('ws');
-const app = express();
+const { Server } = require('ws');
 const http = require('http');
 const cors = require('cors');
 const Measure = require('./app/models/measure');
+const WebSocket = require('ws');
 
+
+const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(cors());
+
 app.get('/', (req, res) => {
     res.send("BeThere WebSocket - Home");
 })
 
-const server = http.createServer(app); // is this necessary? re-check
-const port = 4000;
-
 require('./app/controllers/index')(app); //importa controllers
 
-server.listen(port, () => {
-    console.log(`Server running in the port ${port}`);
-});
+const server = http.createServer(app); 
+const wss = new Server({ server });
 
-const wss = new WebSocket.Server({ port: 8080 });
-
-wss.on('connection' , async ws => {
-    app.post('/send', async function (req, res) {
-        const measure = await Measure.create(req.body);
-        res.send(measure);
-        ws.send(req.body.value);
-    });
-
+wss.on('connection' , ws => {
     ws.on('message', message => {
         console.log(`Received message => ${message}`)
     });
-
-    const lastMeasure = await Measure.find( { measureName: "Pump Status"}).sort( { _id: -1 }).limit(1);
-    console.log(lastMeasure);
+    ws.on('close', () => console.log('Client disconnected'));
     ws.send('I touched the server!');
+});
+
+app.post('/send', async function (req, res) {
+    const measure = await Measure.create(req.body);
+    console.log(req.body.value);
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(req.body.value);
+          }
+    })
+    res.send(measure);
+});
+
+const port = 8080;
+
+server.listen(port, () => {
+    console.log(`Server running in the port ${port}`);
 });

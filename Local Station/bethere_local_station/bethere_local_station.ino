@@ -13,7 +13,8 @@
 #define pinDHT2 13 //D7
 #define pinDHT3 14 //D5
 #define typeDHT DHT22
-#define pumpInputRelay 2
+#define pumpInputRelay 16 // D3
+
 
 using namespace websockets;
 
@@ -54,7 +55,7 @@ void setup() {
 
   // initialize output for relay and put it high
   pinMode(pumpInputRelay, OUTPUT);
-  digitalWrite(pumpInputRelay, LOW); //bomba desligada
+  digitalWrite(pumpInputRelay, HIGH); //bomba desligada
 
   // begin DHT sensors
   dht.begin();
@@ -99,12 +100,13 @@ void setup() {
     wsclient.onMessage([&](WebsocketsMessage message){        
         Serial.print("Message from server: ");
         Serial.println(message.data());
-
         // change state
-        if(message.data() == "1")
-            digitalWrite(pumpInputRelay, LOW);
-        else {
+        if(message.data() == "1") {
+          digitalWrite(pumpInputRelay, LOW);
+          wsclient.send("Pump on!");
+        } else {
           digitalWrite(pumpInputRelay, HIGH);
+          wsclient.send("Pump off!");
         }    
     });
   
@@ -129,8 +131,8 @@ void loop() {
     yield();
   } else {
     Serial.println("reconnecting to websocket server...");
-    wsclient.send("Be There is alive!"); 
     wsclient.connect(websocketServerHost, websocketServerPort, "/");
+    wsclient.send("Be There is alive!"); 
   }
       
   if(digitalRead(pumpInputRelay) == LOW) {
@@ -155,21 +157,45 @@ void loop() {
   lcd.setCursor(0, 0);
   lcd.print("H:");
   lcd.setCursor(2, 0);
-  lcd.print(internalHumidity);
+
+  if (isnan(internalHumidity)) {
+    lcd.print("--.--");
+  } else {
+    lcd.print(internalHumidity);
+  }
+  
   lcd.setCursor(0 ,1);
   lcd.print("T:");
   lcd.setCursor(2 ,1);
-  lcd.print(internalTemperature);
+
+  if (isnan(internalTemperature)) {
+    lcd.print("--.--");
+  } else {
+    lcd.print(internalTemperature);
+  }
+  
   delay(200);
   
   lcd.setCursor(8, 0);
   lcd.print("H2:");
   lcd.setCursor(11, 0);
-  lcd.print(externalHumidity);
+  
+  if (isnan(externalHumidity)) {
+    lcd.print("--.--");
+  } else {
+    lcd.print(externalHumidity);
+  }
+  
   lcd.setCursor(8 ,1);
   lcd.print("T2:");
   lcd.setCursor(11 ,1);
-  lcd.print(externalTemperature);
+  
+  if (isnan(externalTemperature)) {
+    lcd.print("--.--");
+  } else {
+    lcd.print(externalTemperature);
+  }
+  
   delay(200);
 
   // Just for debug - print in serial monitor
@@ -206,5 +232,5 @@ void loop() {
         Serial.println("Coneection Error: " + String(response));
       }
   }
-  delay(10000);
+  delay(2000);
 }
