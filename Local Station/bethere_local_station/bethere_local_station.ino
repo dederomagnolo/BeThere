@@ -28,18 +28,21 @@ DHT dht2(pinDHT2, typeDHT);
 DHT dht3(pinDHT3, typeDHT);
 
 // Network credentials
-char ssid[] = "Satan`s Connection";
-char password[] = "tininha157";
+//char ssid[] = "Satan`s Connection";
+//char password[] = "tininha157";
 //char ssid[] = "iPhone de Débora";
 //char password[] = "texas123";
+char ssid[] = "cogumelos";
+char password[] = "saocarlos";
 
 // Thingspeak credentials
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
 // websocket infos
-const char* websocketServerHost = "192.168.0.34"; 
-const int websocketServerPort = 8080; 
+//const char* websocketServerHost = "192.168.0.34"; 
+//const int websocketServerPort = 8080; 
+const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
 
 // Variables declaration
 int pumpFlag = 0; 
@@ -78,16 +81,17 @@ void setup() {
   WiFi.begin(ssid, password);
  
   while(WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.println("...connecting!"); 
-    yield();
-    ESP.wdtFeed();
+  delay(500);
+  Serial.println("...connecting!"); 
+  yield();
+  ESP.wdtFeed();
   }
   Serial.println("BeThere connected! :D");
 
   // connect with websocket server
-  bool connected = wsclient.connect(websocketServerHost, websocketServerPort, "/");
-
+  // bool connected = wsclient.connect(websocketServerHost, websocketServerPort, "/");
+  bool connected = wsclient.connect(websocketServerHost);
+  
   if(connected) {
     Serial.println("Connected with BeThere websocket server!");
     wsclient.send("Olar");
@@ -104,12 +108,22 @@ void setup() {
         if(message.data() == "1") {
           digitalWrite(pumpInputRelay, LOW);
           wsclient.send("Pump on!");
+        } else if(message.data() == "beat") {
+          int lastStat = digitalRead(pumpInputRelay);
+          digitalWrite(pumpInputRelay, lastStat);
+
+          if(lastStat == 1) {
+            wsclient.send("Pump on!");
+          } else {
+            wsclient.send("Pump off!");
+          }
+           
         } else {
           digitalWrite(pumpInputRelay, HIGH);
           wsclient.send("Pump off!");
         }    
     });
-  
+ 
   ThingSpeak.begin(client);
 }
 
@@ -131,7 +145,8 @@ void loop() {
     yield();
   } else {
     Serial.println("reconnecting to websocket server...");
-    wsclient.connect(websocketServerHost, websocketServerPort, "/");
+    // wsclient.connect(websocketServerHost, websocketServerPort, "/");
+    wsclient.connect(websocketServerHost);
     wsclient.send("Be There is alive!"); 
   }
       
@@ -152,6 +167,8 @@ void loop() {
   // calculate the mean for internal sensors
   internalTemperature = (temperature + temperature2)/2;
   internalHumidity = (humidity + humidity2)/2;
+//  internalTemperature = temperature2;
+//  internalHumidity = humidity2;
 
   // Write the measures on LCD 
   lcd.setCursor(0, 0);
@@ -198,12 +215,12 @@ void loop() {
   
   delay(200);
 
-  // Just for debug - print in serial monitor
-  //  Serial.println("H:" + String(humidity) + "T:" + String(temperature));
-  //  Serial.println("H2:" + String(humidity2) + "T2:" + String(temperature2));
-  //  Serial.println("H3:" + String(externalHumidity) + "T3:" + String(externalTemperature));
-  //  Serial.println("Media T1 T2:" + String(internalTemperature));
-  //  Serial.println("Media H1 H2:" + String(internalHumidity));  
+  //Just for debug - print in serial monitor
+  Serial.println("H:" + String(humidity) + "T:" + String(temperature));
+  Serial.println("H2:" + String(humidity2) + "T2:" + String(temperature2));
+  Serial.println("H3:" + String(externalHumidity) + "T3:" + String(externalTemperature));
+  Serial.println("Media T1 T2:" + String(internalTemperature));
+  Serial.println("Media H1 H2:" + String(internalHumidity));  
 
   // TESTING: SEND MEASURES TO WEBSOCKET SERVER
   //  String measures = "H1:" + String(internalHumidity) + "T1:" +String(internalTemperature) + "H2:" + String(externalHumidity) + "T2:" + String(externalTemperature);

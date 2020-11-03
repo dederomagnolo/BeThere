@@ -5,7 +5,8 @@
 
 char ssid[] = "Satan`s Connection";
 char password[] = "tininha157";
-const char* websockets_server_host = "192.168.0.34"; // IP do servidor websocket
+//const char* websockets_server_host = "192.168.0.34"; // IP do servidor websocket
+const char* websockets_server_host = "https://bethere-be.herokuapp.com/"; // IP do servidor websocket
 const int websockets_server_port = 8080; // Porta de conexão do servidor
 using namespace websockets;
 
@@ -28,7 +29,7 @@ void setup()
     Serial.println("Connected to Wifi, Connecting to server.");
 
     // try to connect to web socket server
-    bool connected = wsclient.connect(websockets_server_host, websockets_server_port, "/");
+    bool connected = wsclient.connect(websockets_server_host);
 
     if(connected) {
         Serial.println("Connected!");
@@ -60,5 +61,3 @@ void loop()
         wsclient.poll();
     delay(300);
 }
-
-

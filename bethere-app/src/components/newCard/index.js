@@ -10,10 +10,10 @@ import {
 } from './styles';
 import { Icon } from 'semantic-ui-react';
 
-export const NewCard = ({label, icon, internalMeasure, externalMeasure, pump, children}) => {
+export const NewCard = ({label, icon, internalMeasure, externalMeasure, pump, children, onClick}) => {
 
     return(
-        <CardContainer>
+        <CardContainer onClick={() => onClick && onClick()}>
             <InnerCard>
                 <CardLabel>
                     <Icon name={icon}/>

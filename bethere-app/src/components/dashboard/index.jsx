@@ -10,7 +10,7 @@ import {Cards, MainContainer} from './styles';
 import {Graph} from './graph';
 
 const base_channel_url = "https://api.thingspeak.com/channels/695672"
-const bethereUrl = "http://localhost:4000";
+const bethereUrl = "https://bethere-be.herokuapp.com";
 
 const initialState = {
     measures: { 
@@ -26,9 +26,10 @@ export const Dashboard = () => {
     const [blockButtonFlag, setBlockButtonFlag] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
     const [measures, setMeasures] = useState(initialState.measures);
-    const [chartData, setChartData] = useState([]);
     const [temperatureData, setTemperatureData] = useState([]);
     const [humidityData, setHumidityData] = useState([]);
+    const [showTemperatureChart, setShowTemperatureChart] = useState(true);
+    const [showHumidityChart, setShowHumidityChart] = useState(false);
     // Week Logics
     /* const lastWeekStartDate = moment().subtract(5, 'days').format("YYYY-MM-DD"); */
     /* const queryStart = `${lastWeekStartDate}%2000:00:00`; */
@@ -59,7 +60,7 @@ export const Dashboard = () => {
             }
             setMeasures(measuresFromRemote);
 
-            if(lastPumpStatus == 1) {
+            if(lastPumpStatus === "1") {
                 setPumpFlag(true);
             } 
         } catch(err) {
@@ -81,22 +82,33 @@ export const Dashboard = () => {
                 const weekFeed = _.get(response, 'data.feeds');
                 const weekFeedSlice = _.slice(weekFeed, 50);
                 const data = [];
-                _.each(weekFeed, (entry, index) => {
-                    if(isOdd(index)) {
+                await _.each(weekFeed, (entry, index) => {
+                    // if(isOdd(index)) {
                         const created_at = _.get(entry, 'created_at');
                         const fieldMeasure = _.get(entry, `field${fieldNumber}`);
                         data.push({
                             "x": moment(created_at).format('hh:mm:ss'),
                             "y": fieldMeasure && fieldMeasure !== "nan" ? Number(fieldMeasure).toFixed(2) : 31.8
                         });
-                    }
+                    // }
                 });
-    
-                setChartData((chartData) => [...chartData, {
-                    "id": setMeasureId(fieldNumber),
-                    "color": setColorId(fieldNumber),
-                    "data": data
-                }]);
+
+                console.log(data);
+
+                if(fieldNumber === 4 || fieldNumber === 6) { // internal temperature and external temperature
+                    setTemperatureData((temperatureData) => [...temperatureData, {
+                        "id" : setMeasureId(fieldNumber),
+                        "color": setColorId(fieldNumber),
+                        "data": data
+                    }]);
+                } else {
+                    setHumidityData((humidityData) => [...humidityData, {
+                        "id" : setMeasureId(fieldNumber),
+                        "color": setColorId(fieldNumber),
+                        "data": data
+                    }]);
+                }
+
             } catch(err) {
                 console.log(err);
             }
@@ -104,20 +116,11 @@ export const Dashboard = () => {
 
         updateFields(4);
         updateFields(6);
-/*         updateFields(3);
-        updateFields(5); */
+        updateFields(3);
+        updateFields(5);
 
     }, []);
 
-    useEffect(() => {
-        console.log(chartData);
-        const temperatureChartData = [chartData[0], chartData[1]];
-/*         const humidityChartData = [chartData[2], chartData[3]];
-        console.log(temperatureChartData); */
-        console.log(temperatureChartData);
-        setTemperatureData(temperatureChartData);
-        /* setHumidityData(humidityChartData); */
-    }, [chartData])
 
     useEffect(() => {
         if(timeLeft === 0){
@@ -130,7 +133,7 @@ export const Dashboard = () => {
         }, 1000);
 
         return () => clearInterval(intervalId);
-    }, [timeLeft])
+    }, [timeLeft]);
         
     const updatePump = async () => { 
         try{
@@ -159,6 +162,8 @@ export const Dashboard = () => {
 
     return (
         <MainContainer>
+            {console.log(temperatureData)}
+            {console.log(humidityData)}
             <Header title="Dashboard"/>
             <div>
                 {/* <span style={{fontSize: "20px"}}>Hello! Your garden looks good today:</span> */}
@@ -167,13 +172,21 @@ export const Dashboard = () => {
                         label={"Temperature (°C)"} 
                         icon={"thermometer half"} 
                         internalMeasure={measures.internalTemperature} 
-                        externalMeasure={measures.externalTemperature} 
+                        externalMeasure={measures.externalTemperature}
+                        onClick={() => {
+                            setShowTemperatureChart(true);
+                            setShowHumidityChart(false);
+                        }}
                     />
                     <NewCard 
                         label={"Humidity (%)"} 
                         icon={"tint"} 
                         internalMeasure={measures.internalHumidity} 
                         externalMeasure={measures.externalHumidity} 
+                        onClick={() => {
+                            setShowHumidityChart(true)
+                            setShowTemperatureChart(false);
+                        }}
                     />
                     <NewCard 
                         label={"Pump Control"} 
@@ -183,21 +196,19 @@ export const Dashboard = () => {
                             <div>
                                 <Toggle 
                                     backgroundColorChecked="#3bea64" 
-                                    disabled={blockButtonFlag} 
+                                    disabled={true} 
                                     checked={pumpFlag} 
                                     onChange={() => updatePump()}
                                 />
-                                <div>{blockButtonFlag ? `Wait ${timeLeft} seconds to send another command` : "Available!"}</div>
+                                <div>{blockButtonFlag ? `Wait ${timeLeft} seconds to send another command` : "Disabled!"}</div>
                             </div>
                             }
                     >
                     </NewCard>
                 </Cards>
-                {chartData.length > 0 && temperatureData.length > 0 && 
-                    <>
-                        <Graph chartData={chartData}/>
-                        {/* <Graph chartData={humidityData} /> */}
-                    </>}
+                {showTemperatureChart && temperatureData.length > 0 && <Graph chartData={temperatureData}/>}
+                {showHumidityChart && humidityData.length > 0 && <Graph chartData={humidityData}/>}
+                {/* {chartData.length > 0 && <Graph chartData={temperatureData}/>} */}
             </div>
         </MainContainer>
     );

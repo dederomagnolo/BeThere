@@ -14,12 +14,12 @@ const MenuBar = () => {
       Icon: () => <ChartBar />,
       text: 'Charts',
       path: '/charts'
-    },
-    {
+    }
+/*     {
       Icon: () => <Adjustments />,
       text: 'Settings',
       path: '/settings'
-    }
+    } */
   ]
   return (
     <Container>

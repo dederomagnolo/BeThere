@@ -40,8 +40,14 @@ app.post('/send', async function (req, res) {
     res.send(measure);
 });
 
+setInterval(() => {
+    wss.clients.forEach((client) => {
+      client.send("beat");
+    });
+  }, 10000);
+
 const port = 8080;
 
-server.listen(port, () => {
+server.listen(process.env.PORT || port, () => {
     console.log(`Server running in the port ${port}`);
 });
