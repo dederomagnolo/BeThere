@@ -87,13 +87,11 @@ export const Dashboard = () => {
                         const created_at = _.get(entry, 'created_at');
                         const fieldMeasure = _.get(entry, `field${fieldNumber}`);
                         data.push({
-                            "x": moment(created_at).format('hh:mm:ss'),
+                            "x": moment.utc(created_at).format('HH:mm'),
                             "y": fieldMeasure && fieldMeasure !== "nan" ? Number(fieldMeasure).toFixed(2) : 31.8
                         });
                     // }
                 });
-
-                console.log(data);
 
                 if(fieldNumber === 4 || fieldNumber === 6) { // internal temperature and external temperature
                     setTemperatureData((temperatureData) => [...temperatureData, {
