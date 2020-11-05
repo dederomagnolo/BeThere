@@ -53,10 +53,10 @@ export const Dashboard = () => {
             const externalTemperature = _.get(lastFeed, 'data.field6');
 
             const  measuresFromRemote  = {
-                internalHumidity: internalHumidity ? Number(internalHumidity).toFixed(2) : "-",
-                internalTemperature: internalTemperature ? Number(internalTemperature).toFixed(2) : "-",
-                externalHumidity: externalHumidity ? Number(externalHumidity).toFixed(2) : "-",
-                externalTemperature: externalTemperature ? Number(externalTemperature).toFixed(2) : "-"
+                internalHumidity: internalHumidity && internalHumidity !== 'nan' ? Number(internalHumidity).toFixed(2) : "-",
+                internalTemperature: internalTemperature && internalTemperature !== 'nan' ? Number(internalTemperature).toFixed(2) : "-",
+                externalHumidity: externalHumidity && externalHumidity !== 'nan' ? Number(externalHumidity).toFixed(2) : "-",
+                externalTemperature: externalTemperature && externalTemperature !== 'nan' ? Number(externalTemperature).toFixed(2) : "-"
             }
             setMeasures(measuresFromRemote);
 
@@ -74,8 +74,9 @@ export const Dashboard = () => {
         const updateFields = async (fieldNumber) => {
             const today = moment().format('YYYY-MM-DD');
             const nextDay = moment().add(1, 'days').format('YYYY-MM-DD');
-            const queryStart = `${today}%2000:00:00`;
-            const queryEnd = `${nextDay}%2000:00:00`;
+
+            const queryStart = `${today}%2003:00:00`;
+            const queryEnd = `${nextDay}%2003:00:00`; //check this timezone to use utc
 
             try {
                 const response = await api.get(`${base_channel_url}/fields/${fieldNumber}.json?start=${queryStart}&end=${queryEnd}`);  // 
@@ -87,7 +88,7 @@ export const Dashboard = () => {
                         const created_at = _.get(entry, 'created_at');
                         const fieldMeasure = _.get(entry, `field${fieldNumber}`);
                         data.push({
-                            "x": moment.utc(created_at).format('HH:mm'),
+                            "x": moment(created_at).format('HH:mm'),
                             "y": fieldMeasure && fieldMeasure !== "nan" ? Number(fieldMeasure).toFixed(2) : 31.8
                         });
                     // }
