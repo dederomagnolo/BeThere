@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const { Server } = require('ws');
 const http = require('http');
 const cors = require('cors');
-const Measure = require('./app/models/measure');
+const Command = require('./app/models/command');
 const WebSocket = require('ws');
 
 
@@ -22,22 +22,31 @@ const server = http.createServer(app);
 const wss = new Server({ server });
 
 wss.on('connection' , ws => {
-    ws.on('message', message => {
-        console.log(`Received message => ${message}`)
+    let lastStatus;
+    ws.on('message', async (message) => {
+        console.log(`Received message => ${message}`);
+        if(message === "R0") {
+            await Command.create({
+                "commandName": "Pump Status",
+                "value": "0",
+                "changedFrom": "Client 1"
+            });
+        } 
     });
     ws.on('close', () => console.log('Client disconnected'));
     ws.send('I touched the server!');
 });
 
 app.post('/send', async function (req, res) {
-    const measure = await Measure.create(req.body);
+    const command = await Command.create(req.body);
     console.log(req.body.value);
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(req.body.value);
           }
     })
-    res.send(measure);
+    
+    res.send(command);
 });
 
 setInterval(() => {

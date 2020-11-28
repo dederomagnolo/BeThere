@@ -32,3 +32,7 @@ export const setMeasureId = (fieldNumber) => {
 export function isOdd(num) { 
     return num % 2;
 }
+
+export function isFromApp(changedFrom) {
+    return changedFrom === "App";
+}

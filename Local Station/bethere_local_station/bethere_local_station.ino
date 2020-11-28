@@ -13,8 +13,8 @@
 #define pinDHT2 13 //D7
 #define pinDHT3 14 //D5
 #define typeDHT DHT22
-#define pumpInputRelay 16 // D3
-
+#define pumpInputRelay 16 // D0
+#define externalSwitch 
 
 using namespace websockets;
 
@@ -28,34 +28,36 @@ DHT dht2(pinDHT2, typeDHT);
 DHT dht3(pinDHT3, typeDHT);
 
 // Network credentials
-//char ssid[] = "Satan`s Connection";
-//char password[] = "tininha157";
+char ssid[] = "Satan`s Connection";
+char password[] = "tininha157";
 //char ssid[] = "iPhone de Débora";
 //char password[] = "texas123";
-char ssid[] = "cogumelos";
-char password[] = "saocarlos";
+//char ssid[] = "cogumelos";
+//char password[] = "saocarlos";
 
 // Thingspeak credentials
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
 // websocket infos
-//const char* websocketServerHost = "192.168.0.34"; 
-//const int websocketServerPort = 8080; 
-const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
+const char* websocketServerHost = "192.168.0.12"; 
+const int websocketServerPort = 8080; 
+// const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
 
 // Variables declaration
 int pumpFlag = 0; 
 unsigned long beginCommandTimer = 0;
+unsigned long beginPumpTimer = 0;
 unsigned long interval = 900000;
+unsigned long pumpMaxInterval = 30000; // 480000;
 float internalTemperature = 0;
 float internalHumidity = 0;
-int statusCode = 0;
 
 void setup() {
+  
   // erase every esp config before start
   ESP.eraseConfig();
-
+  
   // initialize output for relay and put it high
   pinMode(pumpInputRelay, OUTPUT);
   digitalWrite(pumpInputRelay, HIGH); //bomba desligada
@@ -67,7 +69,8 @@ void setup() {
 
   // begin serial port
   Serial.begin(19200);
-  
+
+  // initialize LCD
   lcd.begin(16,2);
   lcd.init();
   lcd.backlight();
@@ -89,8 +92,8 @@ void setup() {
   Serial.println("BeThere connected! :D");
 
   // connect with websocket server
-  // bool connected = wsclient.connect(websocketServerHost, websocketServerPort, "/");
-  bool connected = wsclient.connect(websocketServerHost);
+  bool connected = wsclient.connect(websocketServerHost, websocketServerPort, "/");
+//  bool connected = wsclient.connect(websocketServerHost);
   
   if(connected) {
     Serial.println("Connected with BeThere websocket server!");
@@ -107,12 +110,12 @@ void setup() {
         // change state
         if(message.data() == "1") {
           digitalWrite(pumpInputRelay, LOW);
-          wsclient.send("Pump on!");
+          beginPumpTimer = millis();
         } else if(message.data() == "beat") {
           int lastStat = digitalRead(pumpInputRelay);
           digitalWrite(pumpInputRelay, lastStat);
 
-          if(lastStat == 1) {
+          if(lastStat == LOW) {
             wsclient.send("Pump on!");
           } else {
             wsclient.send("Pump off!");
@@ -145,15 +148,23 @@ void loop() {
     yield();
   } else {
     Serial.println("reconnecting to websocket server...");
-    // wsclient.connect(websocketServerHost, websocketServerPort, "/");
-    wsclient.connect(websocketServerHost);
+    wsclient.connect(websocketServerHost, websocketServerPort, "/");
+    // wsclient.connect(websocketServerHost);
     wsclient.send("Be There is alive!"); 
   }
-      
-  if(digitalRead(pumpInputRelay) == LOW) {
-    Serial.println("Pump on!");
-  } else {
-    Serial.println("Pump off!");
+  
+  // control pump from remote
+  if(beginPumpTimer > 0) {
+    Serial.println("Remote mode activated");
+    wsclient.send("R1"); 
+    if(millis() - beginPumpTimer > pumpMaxInterval){
+      digitalWrite(pumpInputRelay, HIGH);
+      beginPumpTimer = 0;
+      wsclient.send("R0"); 
+      Serial.println("Pump finished the work!");
+    } else {
+      Serial.println("Pump is on!");
+    }
   }
   
   // Read humidity and temperature from DHT22 sensors
@@ -167,8 +178,6 @@ void loop() {
   // calculate the mean for internal sensors
   internalTemperature = (temperature + temperature2)/2;
   internalHumidity = (humidity + humidity2)/2;
-//  internalTemperature = temperature2;
-//  internalHumidity = humidity2;
 
   // Write the measures on LCD 
   lcd.setCursor(0, 0);
@@ -229,7 +238,7 @@ void loop() {
   //    yield();
   //  }
 
-  if(millis() - beginCommandTimer > interval){
+  if(millis() - beginCommandTimer > interval) {
       Serial.println("Sending data..."); 
       // ThingSpeak - Set fields
       ThingSpeak.setField(3, internalHumidity);
