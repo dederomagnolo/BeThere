@@ -8,7 +8,7 @@ import Toggle from 'react-styled-toggle';
 import api from '../../services';
 
 const base_channel_url = "https://api.thingspeak.com/channels/695672"
-/* const bethereUrl = "https://bethere-be.herokuapp.com"; */
+// const bethereUrl = "https://bethere-be.herokuapp.com";
 const bethereUrl = "http://localhost:8080";
 
 export const Settings = () => {

@@ -14,9 +14,9 @@ function generateToken(params = {}) {
 }
 
 router.post('/register', async (req, res)=> {
-    const { email } = req.body;
+    const { username } = req.body;
     try {
-        if(await User.findOne({ email })){
+        if(await User.findOne({ username })){
             return res.status(400).send({ error: 'User already exists!'});
         };
         const user = await User.create(req.body);
@@ -30,10 +30,10 @@ router.post('/register', async (req, res)=> {
 });
 
 router.post('/authenticate' , async (req, res) => {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
     // precisa do password para autenticar, mas está no schema select false
-    const user = await User.findOne({ email }).select('password');
+    const user = await User.findOne({ username }).select('password');
     if(!user) {
         return res.status(400).send({ error: 'User not found!'});
     }
@@ -48,7 +48,14 @@ router.post('/authenticate' , async (req, res) => {
         user, 
         token: generateToken({id: user.id}
     )});
+});
 
-})
+router.post('/clear' , async (req, res) => { 
+    await User.collection.drop();
+
+    res.send({
+        message: "user collection cleared"
+    })
+});
 
 module.exports = app => app.use('/auth', router);

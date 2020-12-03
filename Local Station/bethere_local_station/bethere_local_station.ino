@@ -42,14 +42,14 @@ const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 // websocket infos
 const char* websocketServerHost = "192.168.0.12"; 
 const int websocketServerPort = 8080; 
-// const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
+//const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
 
 // Variables declaration
 int pumpFlag = 0; 
 unsigned long beginCommandTimer = 0;
 unsigned long beginPumpTimer = 0;
 unsigned long interval = 900000;
-unsigned long pumpMaxInterval = 30000; // 480000;
+unsigned long pumpMaxInterval = 600000; // 
 float internalTemperature = 0;
 float internalHumidity = 0;
 
@@ -93,7 +93,7 @@ void setup() {
 
   // connect with websocket server
   bool connected = wsclient.connect(websocketServerHost, websocketServerPort, "/");
-//  bool connected = wsclient.connect(websocketServerHost);
+  //bool connected = wsclient.connect(websocketServerHost);
   
   if(connected) {
     Serial.println("Connected with BeThere websocket server!");

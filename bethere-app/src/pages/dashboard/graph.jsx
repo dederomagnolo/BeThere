@@ -8,7 +8,7 @@ export const Graph = ({chartData}) => {
             {console.log(chartData)}
             <ResponsiveLine
                 data={chartData}
-                margin={{ top: 10, right: 30, bottom: 50, left: 60 }}
+                margin={{ top: 10, right: 30, bottom: 80, left: 60 }}
                 xScale={{ type: 'point', stacked: true }}
                 yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: false, reverse: false }}
                 axisTop={null}
@@ -41,12 +41,12 @@ export const Graph = ({chartData}) => {
                 useMesh={true}
                 legends={[
                     {
-                        anchor: 'top',
-                        direction: 'column',
+                        anchor: 'bottom',
+                        direction: 'row',
                         justify: false,
                         translateX: 100,
-                        translateY: 0,
-                        itemsSpacing: 0,
+                        translateY: 80,
+                        itemsSpacing: 60,
                         itemDirection: 'left-to-right',
                         itemWidth: 80,
                         itemHeight: 20,
