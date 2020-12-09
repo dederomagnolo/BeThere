@@ -18,11 +18,14 @@ app.get('/', (req, res) => {
 
 require('./app/controllers/index')(app); //importa controllers
 
-const server = http.createServer(app); 
+const server = http.createServer(app);
+
 const wss = new Server({ server });
 
 wss.on('connection' , ws => {
-    let lastStatus;
+    ws.isAlive = true;
+    ws.send('I touched the server!');
+    
     ws.on('message', async (message) => {
         console.log(`Received message => ${message}`);
         if(message === "R0") {
@@ -33,9 +36,30 @@ wss.on('connection' , ws => {
             });
         } 
     });
-    ws.on('close', () => console.log('Client disconnected'));
-    ws.send('I touched the server!');
+    ws.on('close', () => {
+        clearInterval(interval);
+        console.log('Client disconnected');
+    });
 });
+
+const interval = setInterval(function ping() {
+    wss.clients.forEach(ws => {
+      if (ws.isAlive === false) return ws.terminate();
+  
+      ws.isAlive = false;
+      /* ws.ping(); */
+    });
+}, 30000);
+
+wss.on('close', function close() {
+    clearInterval(interval);
+});
+
+setInterval(() => {
+    wss.clients.forEach((client) => {
+      client.send("beat");
+    });
+}, 40000);
 
 app.post('/send', async function (req, res) {
     const command = await Command.create(req.body);
@@ -48,12 +72,6 @@ app.post('/send', async function (req, res) {
     
     res.send(command);
 });
-
-setInterval(() => {
-    wss.clients.forEach((client) => {
-      client.send("beat");
-    });
-  }, 10000);
 
 const port = 8080;
 
