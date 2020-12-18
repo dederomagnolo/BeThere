@@ -9,17 +9,17 @@ const MenuBar = () => {
       Icon: () => <Home />,
       text: 'Dashboard',
       path: '/'
-    }
+    },
     /* {
       Icon: () => <ChartBar />,
       text: 'Charts',
       path: '/charts'
-    },
+    }, */
     {
       Icon: () => <Adjustments />,
       text: 'Settings',
       path: '/settings'
-    } */
+    }
   ]
   return (
     <Container>

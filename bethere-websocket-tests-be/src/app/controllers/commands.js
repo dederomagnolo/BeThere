@@ -6,13 +6,9 @@ const router = express.Router();
 
 /* router.use(authMiddleWare); */
 
-router.get('/pumpstatus' , async (req, res) => {
-    const lastCommand = await Command.find({ commandName: "Pump Status"}).sort( { createdAt: -1 }).limit(1);
-    res.send(lastCommand[0]);
-})
-
-router.get('/backlight' , async(req, res) => {
-    const lastCommand = await Command.find({ commandName: "Backlight"}).sort( { createdAt: -1 }).limit(1);
+router.post('/laststatus' , async(req, res) => {
+    const { commandName } = req.body; 
+    const lastCommand = await Command.find({commandName}).sort( {createdAt: -1}).limit(1);
     res.send(lastCommand[0]);
 })
 

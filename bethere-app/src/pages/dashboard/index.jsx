@@ -46,28 +46,18 @@ export const Dashboard = () => {
     // field 6: external temperature
     // field 7: pump indicator
 
-    const updateDataFromRemote = async () => {
+    const updatePumpFromRemote = async () => {
         try{
-            const pumpStatusResponse = await api.get(`${bethereUrl}/commands/pumpstatus`);
-            const lastFeed = await api.get(`${thingspeakUrl}/feeds/last.json`);
+            const pumpStatusResponse = await api.post(`${bethereUrl}/commands/laststatus`, {
+                commandName: "Pump Status"
+            });
+            
             const lastPumpStatus = _.get(pumpStatusResponse, 'data.value');
-            console.log(lastPumpStatus);
-            const commandSentBy = _.get(pumpStatusResponse, 'data.changedFrom');
-            const isCommandFromApp = isFromApp(commandSentBy);
-            setFromApp(isCommandFromApp);
-
-            const internalHumidity = _.get(lastFeed, 'data.field3');
-            const internalTemperature = _.get(lastFeed, 'data.field4');
-            const externalHumidity = _.get(lastFeed, 'data.field5');
-            const externalTemperature = _.get(lastFeed, 'data.field6');
-
-            const  measuresFromRemote  = {
-                internalHumidity: internalHumidity && internalHumidity !== 'nan' ? Number(internalHumidity).toFixed(2) : "-",
-                internalTemperature: internalTemperature && internalTemperature !== 'nan' ? Number(internalTemperature).toFixed(2) : "-",
-                externalHumidity: externalHumidity && externalHumidity !== 'nan' ? Number(externalHumidity).toFixed(2) : "-",
-                externalTemperature: externalTemperature && externalTemperature !== 'nan' ? Number(externalTemperature).toFixed(2) : "-"
+            if(pumpStatusResponse) {
+                const commandSentBy = _.get(pumpStatusResponse, 'data.changedFrom');
+                const isCommandFromApp = isFromApp(commandSentBy);
+                setFromApp(isCommandFromApp);
             }
-            setMeasures(measuresFromRemote);
 
             if(lastPumpStatus === "1") {
                 setPumpFlag(true);
@@ -94,8 +84,30 @@ export const Dashboard = () => {
         }
     }
 
+    const updateFeedFromRemote = async () => {
+        try {
+            const lastFeed = await api.get(`${thingspeakUrl}/feeds/last.json`);
+            const internalHumidity = _.get(lastFeed, 'data.field3');
+            const internalTemperature = _.get(lastFeed, 'data.field4');
+            const externalHumidity = _.get(lastFeed, 'data.field5');
+            const externalTemperature = _.get(lastFeed, 'data.field6');
+
+            const  measuresFromRemote  = {
+                internalHumidity: internalHumidity && internalHumidity !== 'nan' ? Number(internalHumidity).toFixed(2) : "-",
+                internalTemperature: internalTemperature && internalTemperature !== 'nan' ? Number(internalTemperature).toFixed(2) : "-",
+                externalHumidity: externalHumidity && externalHumidity !== 'nan' ? Number(externalHumidity).toFixed(2) : "-",
+                externalTemperature: externalTemperature && externalTemperature !== 'nan' ? Number(externalTemperature).toFixed(2) : "-"
+            }
+                       
+            setMeasures(measuresFromRemote);
+        } catch (err) {
+            console.log(err);
+        }
+    }
+
     useEffect(() => {
-        updateDataFromRemote();
+        updatePumpFromRemote();
+        updateFeedFromRemote();
 
         const updateFields = async (fieldNumber) => {
             const today = moment().format('YYYY-MM-DD');
@@ -168,7 +180,9 @@ export const Dashboard = () => {
         
     const updatePump = async () => { 
         try{
-            const pumpStatusReponse = await api.get(`${bethereUrl}/commands/pumpstatus`);
+            const pumpStatusReponse = await api.post(`${bethereUrl}/commands/laststatus` , {
+                commandName: "Pump Status"
+            });
             setBlockButtonFlag(true);
             const pumpStatus = _.get(pumpStatusReponse, 'data.value');
             if(pumpStatus === "1") {

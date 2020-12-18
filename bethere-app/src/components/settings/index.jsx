@@ -6,10 +6,7 @@ import { Header } from '../header';
 import { Card, Button } from 'semantic-ui-react';
 import Toggle from 'react-styled-toggle';
 import api from '../../services';
-
-const base_channel_url = "https://api.thingspeak.com/channels/695672"
-// const bethereUrl = "https://bethere-be.herokuapp.com";
-const bethereUrl = "http://localhost:8080";
+import {bethereUrl} from '../../services/configs';
 
 export const Settings = () => {
     const [backlightStatus, setBacklightStatus] = useState(false);
@@ -18,15 +15,32 @@ export const Settings = () => {
 
     const handleSendCommand = async () => {
         try {
-            const backlightStatus = await api.get(`${bethereUrl}/commands/backlight`);
-            const status = _.get(backlightStatus, 'data.value');
-            const send = status === "1" ? "0" : "1";
-            await api.post(`${bethereUrl}/send`, {
-                commandName: "Backlight",
-                changedFrom: "App",
-                value: send
+            const lastBackLightResponse = await api.post(`${bethereUrl}/commands/laststatus` , {
+                commandName: "Backlight"
             });
+            const lastStatus = _.get(lastBackLightResponse, 'data.value');
 
+            if(lastStatus === "LCD_ON") {
+                const offRes = await api.post(`${bethereUrl}/send`, {
+                    commandName: "Backlight",
+                    changedFrom: "App",
+                    value: "LCD_OFF"
+                });
+
+                if(offRes) { 
+                    setBacklightStatus(false);
+                }
+            } else {
+                const onRes = await api.post(`${bethereUrl}/send`, {
+                    commandName: "Backlight",
+                    changedFrom: "App",
+                    value: "LCD_ON"
+                });
+
+                if(onRes) { 
+                    setBacklightStatus(true);
+                }
+            }
         } catch(err) {
             console.log(err);
         }
@@ -34,22 +48,29 @@ export const Settings = () => {
 
     useEffect(() => {
         const fetchBacklight = async () => {
-            return await api.get(`${bethereUrl}/commands/backlight`);
-        }
-        try {
-            const res = fetchBacklight();
+            const res = await api.post(`${bethereUrl}/commands/laststatus` , {
+                commandName: "Backlight"
+            });
             const backlightStatusValue = _.get(res, 'data.value');
-            setBacklightStatus(backlightStatusValue);
-        } catch(err) {
-            console.log(err);
+            console.log(res);
+            if(backlightStatusValue === "LCD_ON") {
+                setBacklightStatus(true);
+            } else {
+                setBacklightStatus(false);
+            }
         }
+        fetchBacklight();
     }, []);
 
     return (
         <>  
             <Header title="Settings"/>
-                <Container className="content" style={{paddingTop: "20px", paddingBottom: "20px", maxWidth: "536px"}}>
-                    Backlight <Toggle checked={backlightStatus} onChange={() => handleSendCommand()}/>
+                <Container className="content" style={{paddingTop: "20px", paddingBottom: "20px", maxWidth: "536px", lineHeight: "50px"}}>
+                    Backlight 
+                    <Toggle 
+                        checked={backlightStatus} 
+                        onChange={() => handleSendCommand()}
+                    />
                 </Container>
         </>         
     );
