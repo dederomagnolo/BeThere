@@ -28,7 +28,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 // NTP
 const long utcOffsetInSeconds = -10800;
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
+//NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
 // DHT
 DHT dht(pinDHT, typeDHT);
@@ -36,28 +36,30 @@ DHT dht2(pinDHT2, typeDHT);
 DHT dht3(pinDHT3, typeDHT);
 
 // Network credentials
-char ssid[] = "Satan`s Connection";
-char password[] = "tininha157";
+//char ssid[] = "Satan`s Connection";
+//char password[] = "tininha157";
 //char ssid[] = "iPhone de Débora";
 //char password[] = "texas123";
-//char ssid[] = "cogumelos";
-//char password[] = "saocarlos";
+char ssid[] = "cogumelos";
+char password[] = "saocarlos";
 
 // Thingspeak credentials
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
 // websocket infos
-const char* websocketServerHost = "192.168.0.12"; 
-const int websocketServerPort = 8080; 
-//const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
+// const char* websocketServerHost = "192.168.0.12"; 
+// const int websocketServerPort = 8080; 
+const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
 
 // Variables declaration
 int pumpFlag = 0; 
 unsigned long beginCommandTimer = 0;
 unsigned long beginPumpTimer = 0;
+unsigned long pongTimer = 0;
 unsigned long interval = 900000;
-unsigned long pumpMaxInterval = 600000; // 
+unsigned long pumpMaxInterval = 600000; // 10 minutes
+unsigned long maxPongInterval= 42000; // 40 secs
 float internalTemperature = 0;
 float internalHumidity = 0;
 
@@ -84,7 +86,7 @@ void setup() {
   lcd.backlight();
   lcd.setCursor(0, 0);
   delay(500);
-  lcd.print("Hello!");
+  lcd.print("BeThere started");
   delay(500);
   lcd.setCursor(0, 0);
 
@@ -100,8 +102,8 @@ void setup() {
   Serial.println("BeThere connected! :D");
 
   // connect with websocket server
-  bool connected = wsclient.connect(websocketServerHost, websocketServerPort, "/");
-  //bool connected = wsclient.connect(websocketServerHost);
+  // bool connected = wsclient.connect(websocketServerHost, websocketServerPort, "/");
+  bool connected = wsclient.connect(websocketServerHost);
   
   if(connected) {
     Serial.println("Connected with BeThere websocket server!");
@@ -112,14 +114,32 @@ void setup() {
   }
 
   // callback where the messages are received
-    wsclient.onMessage([&](WebsocketsMessage message){        
+    wsclient.onMessage([&](WebsocketsMessage message){
+        pongTimer = millis();   
+        Serial.println("pong timer started");      
         Serial.print("Message from server: ");
         Serial.println(message.data());
+        if(message.data() == "RESET_ESP") {
+          ESP.restart();
+        }
+
+        if(message.data() == "LCD_ON") {
+          lcd.backlight();
+        }
+
+        if(message.data() == "LCD_OFF") {
+          lcd.noBacklight();
+        }
         // change state
+        if(message.data() == "0") {
+          digitalWrite(pumpInputRelay, HIGH);
+          beginPumpTimer = 0;
+        }
+        
         if(message.data() == "1") {
           digitalWrite(pumpInputRelay, LOW);
           beginPumpTimer = millis();
-        } else if(message.data() == "beat") {
+        } else {
           int lastStat = digitalRead(pumpInputRelay);
           digitalWrite(pumpInputRelay, lastStat);
 
@@ -128,49 +148,60 @@ void setup() {
           } else {
             wsclient.send("Pump off!");
           }
-           
-        } else {
-          digitalWrite(pumpInputRelay, HIGH);
-          wsclient.send("Pump off!");
-        }    
+
+          yield();  
+        }  
     });
  
   ThingSpeak.begin(client);
 }
 
 void loop() {
-  // lcd.noBacklight();
-  timeClient.update();
-  Serial.print(timeClient.getDay());
-  Serial.print(", ");
-  Serial.print(timeClient.getHours());
-  Serial.print(":");
-  Serial.print(timeClient.getMinutes());
+  //wifi recover
+  if(!withoutConfig) {
+    if(WiFi.status() != WL_CONNECTED) {
+      Serial.println("Connection lost!");
+      lcd.setCursor(15,0);
+      lcd.print("*");
+      WiFi.reconnect();
+      delay(1000);
+      yield();
+      ESP.wdtFeed();
+    } else {
+      lcd.setCursor(15,0);
+      lcd.print(" ");
+    }
+  }
 
-  // wi fi recover
   if(WiFi.status() != WL_CONNECTED) {
-    Serial.println("Connection lost!");
-    WiFi.reconnect();
-    delay(1000);
-    yield();
-    ESP.wdtFeed();
+    lcd.setCursor(15,0);
+    lcd.print("*");
+  } else {
+    lcd.setCursor(15,0);
+    lcd.print(" ");
   }
 
   // connection with websocket recover
   if(wsclient.available()) {
+    if(millis() - pongTimer > maxPongInterval) {
+      Serial.println("no response, close connection");
+      wsclient.close();
+    }
     wsclient.poll();
     yield();
   } else {
     Serial.println("reconnecting to websocket server...");
-    wsclient.connect(websocketServerHost, websocketServerPort, "/");
-    // wsclient.connect(websocketServerHost);
-    wsclient.send("Be There is alive!"); 
+    // wsclient.connect(websocketServerHost, websocketServerPort, "/");
+    wsclient.connect(websocketServerHost);
+    wsclient.send("Be There is alive!");
+    pongTimer = millis();
   }
   
   // control pump from remote
   if(beginPumpTimer > 0) {
     Serial.println("Remote mode activated");
-    wsclient.send("R1"); 
+    digitalWrite(pumpInputRelay, LOW);
+    wsclient.send("R1");
     if(millis() - beginPumpTimer > pumpMaxInterval){
       digitalWrite(pumpInputRelay, HIGH);
       beginPumpTimer = 0;
@@ -199,9 +230,12 @@ void loop() {
   lcd.setCursor(2, 0);
 
   if (isnan(internalHumidity)) {
-    lcd.print("--.--");
+    lcd.print("--.-");
   } else {
-    lcd.print(internalHumidity);
+    lcd.print(internalHumidity, 1);
+    // clear empty space
+    lcd.setCursor(6, 0);
+    lcd.print(" ");
   }
   
   lcd.setCursor(0 ,1);
@@ -209,29 +243,29 @@ void loop() {
   lcd.setCursor(2 ,1);
 
   if (isnan(internalTemperature)) {
-    lcd.print("--.--");
+    lcd.print("--.-");
   } else {
-    lcd.print(internalTemperature);
+    lcd.print(internalTemperature, 1);
   }
   
   delay(200);
   
-  lcd.setCursor(8, 0);
+  lcd.setCursor(7, 0);
   lcd.print("H2:");
-  lcd.setCursor(11, 0);
+  lcd.setCursor(10, 0);
   
   if (isnan(externalHumidity)) {
-    lcd.print("--.--");
+    lcd.print("--.-");
   } else {
     lcd.print(externalHumidity);
   }
   
-  lcd.setCursor(8 ,1);
+  lcd.setCursor(7 ,1);
   lcd.print("T2:");
-  lcd.setCursor(11 ,1);
+  lcd.setCursor(10 ,1);
   
   if (isnan(externalTemperature)) {
-    lcd.print("--.--");
+    lcd.print("--.-");
   } else {
     lcd.print(externalTemperature);
   }
@@ -239,11 +273,11 @@ void loop() {
   delay(200);
 
   //Just for debug - print in serial monitor
-  Serial.println("H:" + String(humidity) + "T:" + String(temperature));
-  Serial.println("H2:" + String(humidity2) + "T2:" + String(temperature2));
-  Serial.println("H3:" + String(externalHumidity) + "T3:" + String(externalTemperature));
-  Serial.println("Media T1 T2:" + String(internalTemperature));
-  Serial.println("Media H1 H2:" + String(internalHumidity));  
+//  Serial.println("H:" + String(humidity) + "T:" + String(temperature));
+//  Serial.println("H2:" + String(humidity2) + "T2:" + String(temperature2));
+//  Serial.println("H3:" + String(externalHumidity) + "T3:" + String(externalTemperature));
+//  Serial.println("Media T1 T2:" + String(internalTemperature));
+//  Serial.println("Media H1 H2:" + String(internalHumidity));  
 
   // TESTING: SEND MEASURES TO WEBSOCKET SERVER
   //  String measures = "H1:" + String(internalHumidity) + "T1:" +String(internalTemperature) + "H2:" + String(externalHumidity) + "T2:" + String(externalTemperature);

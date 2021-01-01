@@ -1,20 +1,21 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
-#include "ESP8266WiFi.h"
+#include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <Wire.h>
-#include "SPI.h"
+#include "SPI.h".
 #include <LiquidCrystal_I2C.h>
 #include <ThingSpeak.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <ArduinoWebsockets.h>
+#include <ESP8266WebServer.h>
 
 // Pins definition
 #define pinDHT 14 //D5
 #define typeDHT DHT22
 #define pumpInputRelay 16 // D0
-#define externalSwitch 
+#define gasInput A0
 
 using namespace websockets;
 
@@ -22,6 +23,14 @@ using namespace websockets;
 WiFiClient client;
 WebsocketsClient wsclient;
 LiquidCrystal_I2C lcd(0x27, 16, 2);
+ESP8266WebServer server(80);
+
+// Access point credentials
+const char *ssid = "bethere";
+const char *password = "bethere123";
+
+// Device unique credential
+const char *deviceId = "bethere2020";
 
 // NTP
 const long utcOffsetInSeconds = -10800;
@@ -32,17 +41,19 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 DHT dht(pinDHT, typeDHT);
 
 // Network credentials
-char ssid[] = "Satan`s Connection";
-char password[] = "tininha157";
+//char ssid[] = "Satan`s Connection";
+//char password[] = "tininha157";
+//char ssid[] = "torta de palmito";
+//char password[] = "tininha123";
 
 // Thingspeak credentials
 unsigned long myChannelNumber = 700837;
 const char * myWriteAPIKey = "EZWNLFRNU5LW6XKU";
 
 // websocket infos
-//const char* websocketServerHost = "192.168.0.12"; 
-//const int websocketServerPort = 8080; 
-const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
+const char* websocketServerHost = "192.168.0.12"; 
+const int websocketServerPort = 8080; 
+// const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
 
 // Variables declaration
 int pumpFlag = 0; 
@@ -51,14 +62,16 @@ unsigned long beginPumpTimer = 0;
 unsigned long pongTimer = 0;
 unsigned long interval = 900000;
 unsigned long pumpMaxInterval = 600000;
-unsigned long maxPongInterval= 46000;
+unsigned long maxPongInterval= 42000;
 float internalTemperature = 0;
 float internalHumidity = 0;
 
 void setup() {
+  // begin serial port
+  Serial.begin(19200);
   
   // erase every esp config before start
-  ESP.eraseConfig();
+  // ESP.eraseConfig();
   
   // initialize output for relay and put it high
   pinMode(pumpInputRelay, OUTPUT);
@@ -66,9 +79,6 @@ void setup() {
 
   // begin DHT sensors
   dht.begin();
-
-  // begin serial port
-  Serial.begin(19200);
 
   // initialize LCD
   lcd.begin(16,2);
@@ -81,16 +91,16 @@ void setup() {
   lcd.setCursor(0, 0);
 
   // begin wifi and try to connect
-  WiFi.begin(ssid, password);
+  // WiFi.begin(ssid, password);
  
-  while(WiFi.status() != WL_CONNECTED) {
-  delay(500);
-  Serial.println("...connecting!"); 
-  yield();
-  ESP.wdtFeed();
-  }
-  Serial.println("BeThere connected! :D");
-
+//  while(WiFi.status() != WL_CONNECTED) {
+//  delay(500);
+//  Serial.println("...connecting!"); 
+//  yield();
+//  ESP.wdtFeed();
+//  }
+//  Serial.println("BeThere connected! :D");
+  
   // connect with websocket server
   // bool connected = wsclient.connect(websocketServerHost, websocketServerPort, "/");
   bool connected = wsclient.connect(websocketServerHost);
@@ -138,28 +148,26 @@ void setup() {
 }
 
 void loop() {
-  // lcd.noBacklight();
-//  timeClient.update();
-//  Serial.print(timeClient.getDay());
-//  Serial.print(", ");
-//  Serial.print(timeClient.getHours());
-//  Serial.print(":");
-//  Serial.print(timeClient.getMinutes());
+  // get time to turn off backlight in the night
+  timeClient.update();
+  int hours = timeClient.getHours();
+  if(hours >= 21) {
+    lcd.noBacklight();
+  } else {
+    lcd.backlight();
+  } 
 
   // wi fi recover
-  if(WiFi.status() != WL_CONNECTED) {
-    Serial.println("Connection lost!");
-    WiFi.reconnect();
-    delay(1000);
-    yield();
-    ESP.wdtFeed();
-  }
+//  if(WiFi.status() != WL_CONNECTED) {
+//    Serial.println("Connection lost!");
+//    WiFi.reconnect();
+//    delay(1000);
+//    yield();
+//    ESP.wdtFeed();
+//  }
 
   // connection with websocket recover
-  Serial.println(wsclient.available());
-  Serial.println(wsclient.poll());
   if(wsclient.available()) {
-
     if(millis() - pongTimer > maxPongInterval) {
       Serial.println("no response, close connection");
       wsclient.close();
@@ -188,7 +196,7 @@ void loop() {
       Serial.println("Pump is on!");
     }
   }
-  
+
   // Read humidity and temperature from DHT22 sensors
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
