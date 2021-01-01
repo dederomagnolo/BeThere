@@ -14,11 +14,15 @@ function generateToken(params = {}) {
 }
 
 router.post('/register', async (req, res)=> {
-    const { username } = req.body;
+    const { username, email } = req.body;
     try {
         if(await User.findOne({ username })){
             return res.status(400).send({ error: 'User already exists!'});
         };
+
+        if(!username || !email) {
+            return res.status(400).send({error: 'Username/Email/Password is required'});
+        }
         const user = await User.create(req.body);
 
         user.password = undefined;
@@ -50,12 +54,21 @@ router.post('/authenticate' , async (req, res) => {
     )});
 });
 
+// only for tests
 router.post('/clear' , async (req, res) => { 
     await User.collection.drop();
-
     res.send({
         message: "user collection cleared"
-    })
+    });
+});
+
+router.get('/all' , async (req, res) => {
+    try {
+        const users = await User.find().select(["-__v"]);
+        res.send({ users });
+    } catch(err) {
+        return res.status(400).send({ error: err.message});
+    }
 });
 
 module.exports = app => app.use('/auth', router);

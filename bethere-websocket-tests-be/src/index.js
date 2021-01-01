@@ -5,6 +5,7 @@ const http = require('http');
 const cors = require('cors');
 const Command = require('./app/models/command');
 const WebSocket = require('ws');
+const Device = require('./app/models/device');
 
 
 const app = express();
@@ -25,8 +26,19 @@ const wss = new Server({ server });
 wss.on('connection' , ws => {
     ws.isAlive = true;
     ws.send('I touched the server!');
-    
+
     ws.on('message', async (message) => {
+        let deviceSerialKey = message.substr(0,2);
+        if (deviceSerialKey === "$S") {
+            deviceSerialKey = message.substr(2,deviceSerialKey.lenght);
+            const deviceFound = await Device.find({deviceSerialKey});
+            if(deviceFound && deviceFound.length === 0) {
+                console.log("not authenticated");
+                ws.close();
+            } else {
+                ws.send("authenticated!");
+            }
+        }
         console.log(`Received message => ${message}`);
         if(message === "R0") {
             await Command.create({
@@ -34,7 +46,7 @@ wss.on('connection' , ws => {
                 "value": "0",
                 "changedFrom": "Client 1"
             });
-        } 
+        }
     });
     ws.on('close', () => {
         clearInterval(interval);
@@ -42,24 +54,23 @@ wss.on('connection' , ws => {
     });
 });
 
+setInterval(() => {
+    wss.clients.forEach((client) => {
+        client.send("beat");
+    });
+}, 40000);
+
 const interval = setInterval(function ping() {
     wss.clients.forEach(ws => {
       if (ws.isAlive === false) return ws.terminate();
-  
+        ws.ping();
       ws.isAlive = false;
-      /* ws.ping(); */
     });
 }, 30000);
 
 wss.on('close', function close() {
     clearInterval(interval);
 });
-
-setInterval(() => {
-    wss.clients.forEach((client) => {
-      client.send("beat");
-    });
-}, 40000);
 
 app.post('/send', async function (req, res) {
     const command = await Command.create(req.body);
