@@ -61,8 +61,8 @@ int pumpFlag = 0;
 unsigned long beginCommandTimer = 0;
 unsigned long beginPumpTimer = 0;
 unsigned long pongTimer = 0;
-//unsigned long interval = 900000;
-unsigned long interval = 900000*4;
+//unsigned long interval = 3600000;
+unsigned long interval = 900000;
 unsigned long pumpMaxInterval = 600000;
 unsigned long maxPongInterval= 42000;
 unsigned long lcdTimer = 0;
@@ -235,7 +235,9 @@ void loop() {
   } else {
     if(hours >= 23) {
       lcd.noBacklight();
-    } 
+    } else {
+      lcd.backlight();
+    }
   }
 
   // wi fi recover
@@ -320,12 +322,14 @@ void loop() {
 
   // Read MQ135 sensor
   int analogGasMeasure = analogRead(gasInput);
-  float gasVolts = analogGasMeasure*(4.77/1023.0);
+  float gasVolts = analogGasMeasure*(5.0/1023.0); // VRL
+  Serial.print("VRL:");
+  Serial.println(gasVolts);
   // RL = 20kohms from datasheet 
   // RS is the resistance in various concentration of gases
   // R0 should be the resistence in clean air with 100 ppm of NH3
-  float gasRS = 1000 * (4.77 - gasVolts)/gasVolts;
-  float ratio = gasRS/22500;
+  float gasRS = 19650 * (5.0 - gasVolts)/gasVolts; // RL * RSAnalog
+  float ratio = gasRS/1; // RS/R0
   
   Serial.print("gas measure:");
   Serial.println(gasRS);
@@ -354,11 +358,12 @@ void loop() {
   }
 
   // test
-//  lcd.setCursor(7, 0);
-//  lcd.print("H2:");
-//  lcd.setCursor(10, 0);
-//  lcd.print(humidity, 1);
-  
+  lcd.setCursor(7, 0);
+  lcd.print("R:");
+  lcd.setCursor(9, 0);
+  lcd.print(gasRS/1000, 1);
+
+  // print temperature
   lcd.setCursor(0 ,1);
   lcd.print("T:");
   lcd.setCursor(2 ,1);
@@ -368,13 +373,14 @@ void loop() {
   } else {
     lcd.print(temperature, 1);
   }
-  //test
-//  lcd.setCursor(7 ,1);
-//  lcd.print("T2:");
-//  lcd.setCursor(10 ,1);
-//  lcd.print(temperature, 1);
-//  lcd.setCursor(14 ,0);
-//  lcd.print(" ");
+  
+  //print PPM
+  lcd.setCursor(7 ,1);
+  lcd.print("PPM:");
+  lcd.setCursor(11 ,1);
+  lcd.print(ppm, 1);
+  lcd.setCursor(14 ,0);
+  lcd.print(" ");
   
   delay(200);
   
@@ -393,7 +399,7 @@ void loop() {
       // ThingSpeak - Set fields
       ThingSpeak.setField(1, humidity);
       ThingSpeak.setField(2, temperature);
-      ThingSpeak.setField(3, ppm);
+      ThingSpeak.setField(3, gasRS);
       // ThingSpeak - Write fields
       int response = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
       client.flush();
@@ -420,7 +426,6 @@ void handleRoot() {
 
 void handleResetConfig() {
     ESP.eraseConfig();
-    Serial.print("oi");
     server.send(200, "text/html", INDEX_HTML);
     ESP.reset();
 }
