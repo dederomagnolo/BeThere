@@ -5,6 +5,10 @@ const CommandSchema = new mongoose.Schema({
         type: String,
         require: true
     },
+    deviceId:{
+        type: String,
+        require: true
+    },
     value: {
         type: String,
         required: true,

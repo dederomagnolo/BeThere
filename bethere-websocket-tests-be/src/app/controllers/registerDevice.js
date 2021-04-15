@@ -22,6 +22,7 @@ router.post('/new-device' , async(req, res) => {
         const { deviceSerialKey, email, deviceName } = req.body; 
         const productAvailable = await Product.find({deviceSerialKey});
         const user = await User.findOne({email});
+
         if(productAvailable && user) {
             const serialKey = productAvailable[0].deviceSerialKey;
             const existingDevice = await Device.find({serialKey});
@@ -30,13 +31,15 @@ router.post('/new-device' , async(req, res) => {
                 return res.status(400).send("Device already registered");
             }
 
-            const newDevice = {
+            const newDeviceData = {
                 deviceName,
                 deviceSerialKey: productAvailable[0].deviceSerialKey,
                 userId: user._id
             }
 
-            await Device.create(newDevice);
+            const newDevice = await Device.create(newDeviceData);
+            user.devices.push(newDevice);
+            console.log(user);
             await Product.findOneAndUpdate({deviceSerialKey}, {available: false});
             return res.send("Device assignated to user with success"); 
         } else {
@@ -65,6 +68,15 @@ router.post('/populate/clear' , async(req, res) => {
     } catch(err) {
         return res.status(400).send({ error: err.message});
     }  
+});
+// only for test
+router.get('/products/clear' , async (req, res) => {
+    try {
+        await Product.collection.drop();
+        return res.send({message: "Products collection cleared!"});
+    } catch(err) {
+        return res.status(400).send({ error: err.message});
+    }
 });
 
 //catalog

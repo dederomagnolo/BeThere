@@ -47,6 +47,14 @@ wss.on('connection' , ws => {
                 "changedFrom": "Client 1"
             });
         }
+
+        if(message === "LCD_OFF"){
+            await Command.create({
+                "commandName": "Backlight",
+                "value": "LCD_OFF",
+                "changedFrom": "Client 1"
+            });
+        }
     });
     ws.on('close', () => {
         clearInterval(interval);

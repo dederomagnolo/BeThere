@@ -3,19 +3,18 @@ const mongoose = require('../../database');
 const DeviceSchema = new mongoose.Schema({
     deviceSerialKey: {
         type: String,
-        require: true
+        required: true
     },
     createdAt: {
         type: Date,
         default: Date.now
     },
     userId: {
-        type: String,
-        require: require
+        type: mongoose.Schema.Types.ObjectId, ref: 'User',  required: true
     },
     deviceName: {
         type: String,
-        require: false
+        required: false
     },
     settings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Settings',  require: false}]
 });

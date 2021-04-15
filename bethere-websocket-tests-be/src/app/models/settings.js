@@ -1,17 +1,13 @@
 const mongoose = require('../../database');
 
 const SettingsSchema = new mongoose.Schema({
-    userId: {
-        type: String,
-        require: true
-    },
     deviceId:{
         type: String,
-        require: true
+        required: true
     },
     settingsName: {
         type: String,
-        require: false
+        required: false
     },
     createdAt: {
         type: Date,
@@ -19,22 +15,22 @@ const SettingsSchema = new mongoose.Schema({
     },
     backlight: {
         type: Number,
-        require:false,
+        required:false,
         default: 22
     },
     pumpTimer: {
         type: Number,
-        require: false,
+        required: false,
         default: 10 //mins
     },
     localMeasureInterval: {
         type: Number,
-        require: false,
+        required: false,
         default: 10 //seconds
     },
     remoteMeasureInterval: {
         type: Number,
-        require: false,
+        required: false,
         default: 15 //mins
     }
 });
