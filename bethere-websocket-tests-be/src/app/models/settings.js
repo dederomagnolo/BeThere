@@ -26,7 +26,7 @@ const SettingsSchema = new mongoose.Schema({
     localMeasureInterval: {
         type: Number,
         required: false,
-        default: 10 //seconds
+        default: 5 //seconds
     },
     remoteMeasureInterval: {
         type: Number,

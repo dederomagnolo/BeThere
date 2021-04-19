@@ -1,14 +1,16 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Server } = require('ws');
-const http = require('http');
-const cors = require('cors');
-const Command = require('./app/models/command');
 const WebSocket = require('ws');
-const Device = require('./app/models/device');
-const Settings = require('./app/models/settings');
 const uuid = require('uuid');
 const moment = require('moment');
+const http = require('http');
+const cors = require('cors');
+
+const Command = require('./app/models/command');
+const Device = require('./app/models/device');
+const Settings = require('./app/models/settings');
+const {minutesToMilliseconds, secondsToMilliseconds} = require('./utils');
 
 const app = express();
 app.use(bodyParser.json());
@@ -28,19 +30,24 @@ const wss = new Server({ server });
 wss.on('connection' , ws => {
     ws.isAlive = true;
     ws.send('Server touched!');
-    /* ws.id = uuid.v4(); */
+    ws.id = uuid.v4();
 
     ws.on('message', async (message) => {
         let deviceSerialKey = message.substr(0,2);
         if (deviceSerialKey === "$S") {
-            console.log("primeiro if");
             deviceSerialKey = message.substr(2,deviceSerialKey.lenght);
             const deviceFound = await Device.findOne({deviceSerialKey});
             if(deviceFound) {
                 const deviceSettings = await Settings.findOne({_id: deviceFound.settings[0]});
                 ws.send("authenticated!");
                 ws.send("SETTINGS");
-                ws.send(`${deviceSettings.backlight},${deviceSettings.pumpTimer},${deviceSettings.localMeasureInterval},${deviceSettings.remoteMeasureInterval}, 0`);
+                ws.send(`
+                    ${deviceSettings.backlight},
+                    ${minutesToMilliseconds(deviceSettings.pumpTimer)},
+                    ${secondsToMilliseconds(deviceSettings.localMeasureInterval)},
+                    ${minutesToMilliseconds(deviceSettings.remoteMeasureInterval)}, 
+                    0
+                `);
             } else {
                 ws.send("not authenticated!");
                 ws.close();                
@@ -74,7 +81,7 @@ wss.on('connection' , ws => {
     });
 });
 
-setInterval(() => {
+const interval = setInterval(() => {
     wss.clients.forEach((client) => {
         console.log(client.id);
         client.send("beat");
@@ -89,12 +96,12 @@ setInterval(() => {
         ws.ping();
         ws.isAlive = false;
     });
-}, 30000);
+}, 30000); */
 
-wss.on('close', function close() {
+/* wss.on('close', function close() {
     clearInterval(interval);
-}); */
-
+});
+ */
 app.post('/send', async function (req, res) {
     const command = await Command.create(req.body);
     console.log(req.body.value);
