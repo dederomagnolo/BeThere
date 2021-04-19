@@ -1,4 +1,5 @@
 #include <Adafruit_Sensor.h>
+#include <string.h>
 #include <DHT.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -15,8 +16,9 @@
 #define pinDHT 14 //D5
 #define typeDHT DHT22
 #define pumpInputRelay 16 // D0
-#define gasInput A0
+// #define gasInput A0
 #define actionButton 12
+#define moistureInput A0
 
 using namespace websockets;
 
@@ -30,7 +32,7 @@ const char *ssid = "BeThere Access Point";
 const char *password = "welcome123";
 
 //Device serial number
-const char *serialKey = "34PQL-YBAZJ-TVVHL-77HRV";
+const char *serialKey = "9NYHA-8CJ0G-PFED7-S545L";
 
 // Start server
 ESP8266WebServer server(80);
@@ -38,6 +40,9 @@ ESP8266WebServer server(80);
 IPAddress ap_local_IP(192,168,1,1);
 IPAddress ap_gateway(192,168,1,254);
 IPAddress ap_subnet(255,255,255,0);
+
+//char ssid[] = "Satan`s Connection";
+//char password[] = "tininha157";
 
 // NTP - time configs
 const long utcOffsetInSeconds = -10800; //timezone adjustment
@@ -52,7 +57,7 @@ unsigned long myChannelNumber = 700837;
 const char * myWriteAPIKey = "EZWNLFRNU5LW6XKU";
 
 // websocket infos
-const char* websocketServerHost = "192.168.15.16"; 
+const char* websocketServerHost = "192.168.0.12"; 
 const int websocketServerPort = 8080; 
 // const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
 
@@ -61,15 +66,15 @@ int pumpFlag = 0;
 unsigned long beginCommandTimer = 0;
 unsigned long beginPumpTimer = 0;
 unsigned long pongTimer = 0;
-//unsigned long interval = 3600000;
-unsigned long interval = 900000;
-unsigned long pumpMaxInterval = 600000;
-unsigned long maxPongInterval= 42000;
+// backlight, pumpTimer, localMeasureInterval, remoteMeasureInterval
+unsigned long settings[4] = {22,600000,3000,180000}; 
+unsigned long maxPongInterval= 41000;
 unsigned long lcdTimer = 0;
 unsigned long lcdTimerMaxInterval = 60000;
 float internalTemperature = 0;
 float internalHumidity = 0;
-bool withoutConfig;
+bool withoutConfig; // flag to track auto ESP connection. without config means the user should configure the network
+bool settingsOn = false;
 
 const char INDEX_HTML[] =
 "<!DOCTYPE HTML>"
@@ -100,6 +105,8 @@ const char INDEX_HTML[] =
 void setup() {
   // begin serial port
   Serial.begin(115200);
+  Wire.begin(); // Wire communication begin
+  while (!Serial); // Waiting for Serial Monitor
 
   // start server for access point
   WiFi.softAPConfig(ap_local_IP, ap_gateway, ap_subnet);
@@ -122,8 +129,24 @@ void setup() {
   lcd.setCursor(0, 0);
 
   // try to auto connect with last session
-  WiFi.getAutoConnect();
+  //WiFi.getAutoConnect();
   delay(5000);
+
+  Serial.println(settings[0]);
+  Serial.println(settings[1]);
+  Serial.println(settings[2]);
+  Serial.println(settings[3]);
+  // begin wifi and try to connect
+  //  WiFi.begin(ssid, password);
+  withoutConfig = false;
+ 
+  while(WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println("...connecting!"); 
+    yield();
+    ESP.wdtFeed();
+  }
+  
   if(WiFi.status() == WL_CONNECTED) {
     Serial.println("...connected using last credentials!");
     withoutConfig = false;
@@ -138,7 +161,7 @@ void setup() {
   digitalWrite(pumpInputRelay, HIGH); //bomba desligada
   
   // initialize analog pin for MQ135
-  pinMode(gasInput, INPUT);
+  pinMode(moistureInput, INPUT);
   
   // begin DHT sensors
   dht.begin();
@@ -153,39 +176,65 @@ void setup() {
     wsclient.send(String("$S") + serialKey);
   } else {
     Serial.println("Not Connected!");
-    return;
   }
+  
+  ThingSpeak.begin(client);
   delay(500);
-
+  
   // callback where the messages are received
   wsclient.onMessage([&](WebsocketsMessage message){
-      pongTimer = millis();   
+      pongTimer = millis();
+      String messageFromRemote = message.data();
       Serial.println("pong timer started");      
       Serial.print("Message from server: ");
       Serial.println(message.data());
-      if(message.data() == "RESET_ESP") {
-        ESP.restart();
+
+      if(settingsOn) { // command SETTINGS triggered. The default settings array will be overwriten
+        // backlight, pumpTimer, localMeasureInterval, remoteMeasureInterval
+        char commandArray[messageFromRemote.length()];
+        messageFromRemote.toCharArray(commandArray, messageFromRemote.length());
+        char *parsedSettings;
+        parsedSettings = strtok(commandArray, ",");
+        int cont = 0;
+        
+        while( parsedSettings != NULL ) {
+          int numb = atoi(parsedSettings) - 0;
+          settings[cont] = numb; // *60 min*1000ms
+          cont++;
+          parsedSettings = strtok(NULL, ",");
+          yield();
+        }
+        settingsOn = false;
+      }
+      
+      if(messageFromRemote == "SETTINGS") {
+        settingsOn = true;
+      }
+      
+      if(messageFromRemote == "RESET_ESP") {
+          ESP.restart();
       }
 
-      if(message.data() == "LCD_ON") {
+      if(messageFromRemote == "LCD_ON") {
         lcdTimer = millis();
         lcd.backlight();
       }
 
-      if(message.data() == "LCD_OFF") {
+      if(messageFromRemote == "LCD_OFF") {
         if(lcdTimer > 0) {
           lcdTimer = 0;
         }
         lcd.noBacklight();
       }
       
-      // change state
-      if(message.data() == "0") {
+      // change pump 
+      if(messageFromRemote == "MP0") {
+        
         digitalWrite(pumpInputRelay, HIGH);
         beginPumpTimer = 0;
       }
       
-      if(message.data() == "1") {
+      if(messageFromRemote == "MP1") {
         digitalWrite(pumpInputRelay, LOW);
         beginPumpTimer = millis();
       } else {
@@ -197,12 +246,9 @@ void setup() {
         } else {
           wsclient.send("Pump off!");
         }
-
         yield();  
       }  
   });
- 
-  ThingSpeak.begin(client);
   lcd.clear();
 }
 
@@ -224,21 +270,21 @@ void loop() {
   timeClient.update();
   int hours = timeClient.getHours();
 
-  if(lcdTimer > 0) {
-    if(millis() - lcdTimer > lcdTimerMaxInterval) {
-      lcd.noBacklight();
-      lcdTimer = 0;
-      wsclient.send("LCD_OFF"); 
-    } else {
-      lcd.backlight();
-    }
-  } else {
-    if(hours >= 23) {
-      lcd.noBacklight();
-    } else {
-      lcd.backlight();
-    }
-  }
+//  if(lcdTimer > 0) {
+//    if(millis() - lcdTimer > lcdTimerMaxInterval) {
+//      lcd.noBacklight();
+//      lcdTimer = 0;
+//      wsclient.send("LCD_OFF"); 
+//    } else {
+//      lcd.backlight();
+//    }
+//  } else {
+//    if(hours >= 0 && hours <= 8) {
+//      lcd.noBacklight();
+//    } else {
+//      lcd.backlight();
+//    }
+//  }
 
   // wi fi recover
   if(!withoutConfig) {
@@ -266,7 +312,6 @@ void loop() {
   
   // Waiting for connection
   while(withoutConfig) {
-    Serial.println(digitalRead(actionButton));
     server.handleClient();
     lcd.setCursor(0, 0);
     lcd.print("Without connection");
@@ -306,14 +351,14 @@ void loop() {
     pongTimer = millis();
   }
   
-  // control pump from remote
+  // control pump from remote - manual mode
   if(beginPumpTimer > 0) {
     Serial.println("Remote mode activated");
-    wsclient.send("R1"); 
-    if(millis() - beginPumpTimer > pumpMaxInterval){
+    wsclient.send("MP1"); 
+    if(millis() - beginPumpTimer > settings[1]){
       digitalWrite(pumpInputRelay, HIGH);
       beginPumpTimer = 0;
-      wsclient.send("R0"); 
+      wsclient.send("MP0"); 
       Serial.println("Pump finished the work!");
     } else {
       Serial.println("Pump is on!");
@@ -321,24 +366,28 @@ void loop() {
   }
 
   // Read MQ135 sensor
-  int analogGasMeasure = analogRead(gasInput);
-  float gasVolts = analogGasMeasure*(5.0/1023.0); // VRL
-  Serial.print("VRL:");
-  Serial.println(gasVolts);
+  // int analogGasMeasure = analogRead(gasInput);
+  // float gasVolts = analogGasMeasure*(5.0/1023.0); // VRL
+  // Serial.print("VRL:");
+  // Serial.println(gasVolts);
   // RL = 20kohms from datasheet 
   // RS is the resistance in various concentration of gases
   // R0 should be the resistence in clean air with 100 ppm of NH3
-  float gasRS = 19650 * (5.0 - gasVolts)/gasVolts; // RL * RSAnalog
-  float ratio = gasRS/1; // RS/R0
-  
-  Serial.print("gas measure:");
-  Serial.println(gasRS);
-  Serial.print("ratio:");
-  Serial.println(ratio);
+  // float gasRS = 19650 * (5.0 - gasVolts)/gasVolts; // RL * RSAnalog
+  // float ratio = gasRS/427060; // RS/R0
+
+  int moistureAnalogMeasure = analogRead(moistureInput);
+  Serial.print("SM:");
+  Serial.print(moistureAnalogMeasure);
+//  Serial.println(ppm);
+//  Serial.print("gas measure:");
+//  Serial.println(gasRS);
+//  Serial.print("ratio:");
+//  Serial.println(ratio);
   // ppm = 116.6020682 (Rs/Ro)^-2.769034857
-  float ppm = 116.60 * pow(ratio, -2.77);
-  Serial.print("PPM:");
-  Serial.println(ppm);
+//  float ppm = 116.60 * pow(ratio, -2.77);
+//  Serial.print("PPM:");
+//  Serial.println(ppm);
   
   // Read humidity and temperature from DHT22 sensors
   float humidity = dht.readHumidity();
@@ -359,9 +408,12 @@ void loop() {
 
   // test
   lcd.setCursor(7, 0);
-  lcd.print("R:");
+  lcd.print("M:");
   lcd.setCursor(9, 0);
-  lcd.print(gasRS/1000, 1);
+  lcd.print(moistureAnalogMeasure);
+//  lcd.print("R:");
+//  lcd.setCursor(9, 0);
+//  lcd.print(gasRS/1000, 1);
 
   // print temperature
   lcd.setCursor(0 ,1);
@@ -375,12 +427,12 @@ void loop() {
   }
   
   //print PPM
-  lcd.setCursor(7 ,1);
-  lcd.print("PPM:");
-  lcd.setCursor(11 ,1);
-  lcd.print(ppm, 1);
-  lcd.setCursor(14 ,0);
-  lcd.print(" ");
+//  lcd.setCursor(7 ,1);
+//  lcd.print("PPM:");
+//  lcd.setCursor(11 ,1);
+//  lcd.print(ppm, 1);
+//  lcd.setCursor(14 ,0);
+//  lcd.print(" ");
   
   delay(200);
   
@@ -394,16 +446,17 @@ void loop() {
   //    yield();
   //  }
 
-  if(millis() - beginCommandTimer > interval) {
+  if(millis() - beginCommandTimer > settings[3]) {
       Serial.println("Sending data..."); 
       // ThingSpeak - Set fields
       ThingSpeak.setField(1, humidity);
       ThingSpeak.setField(2, temperature);
-      ThingSpeak.setField(3, gasRS);
+//      ThingSpeak.setField(3, gasRS);
+//      ThingSpeak.setField(4, ppm);  
       // ThingSpeak - Write fields
       int response = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
-      client.flush();
       // Check status response
+      Serial.println(response);
       if (response == 200){
         Serial.println("Data sent with success!");
         beginCommandTimer = millis();
@@ -412,14 +465,14 @@ void loop() {
         Serial.println("Coneection Error: " + String(response));
       }
   }
-  delay(2000);
+  delay(settings[2]);
 }
 
 void handleRoot() {
   if (server.hasArg("ssid")&& server.hasArg("Password")) {//If all form fields contain data call handelSubmit()
    handleSubmit();
   }
-  else {//Redisplay the form
+  else { //Redisplay the form
     server.send(200, "text/html", INDEX_HTML);
   }
 }
@@ -458,4 +511,3 @@ void handleSubmit(){
   delay(500);
   lcd.clear();
 }
-
