@@ -16,7 +16,7 @@ const SettingsSchema = new mongoose.Schema({
     backlight: {
         type: Number,
         required:false,
-        default: 22
+        default: 22 //hrs?
     },
     pumpTimer: {
         type: Number,

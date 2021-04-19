@@ -3,7 +3,7 @@ const mongoose = require('../../database');
 const ProductSchema = new mongoose.Schema({
     deviceSerialKey: {
         type: String,
-        require: true
+        required: true
     },
     createdAt: {
         type: Date,

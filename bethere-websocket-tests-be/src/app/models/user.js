@@ -19,7 +19,7 @@ const UserSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true,
-        select: false // quando busca um user/lista o campo password nao deve ser retornado
+        select: true // quando busca um user/lista o campo password nao deve ser retornado
     },
     createdAt: {
         type: Date,

@@ -3,7 +3,7 @@ const mongoose = require('../../database');
 const CommandSchema = new mongoose.Schema({
     commandName: {
         type: String,
-        require: true
+        required: true
     },
     deviceId:{
         type: String,

@@ -29,10 +29,11 @@ router.post('/new' , async(req, res) => {
             remoteMeasureInterval
         } = req.body; 
         const user = await User.find({_id: userId});
-        const device = await Device.find({_id: deviceId});
+        const device = await Device.findOne({_id: deviceId});
+        console.log(device);
         // need to match device with user here, before to create the new setting
         if(user && device) {
-            await Settings.create({ 
+            const newSettings = await Settings.create({ 
                 deviceId, 
                 settingsName, 
                 backlight, 
@@ -40,7 +41,11 @@ router.post('/new' , async(req, res) => {
                 localMeasureInterval, 
                 remoteMeasureInterval
             });
+            
+            device.settings.push(newSettings);
+            device.save();
             return res.send("Created with success"); 
+            
         } else {
             res.status(400).send("User or device not found");
         }
