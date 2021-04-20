@@ -30,7 +30,6 @@ export const ProfilePicture = styled.div`
 
   img {
     height: 35px;
-    width: 35px;
     border-radius: 50px;
   }
 `;

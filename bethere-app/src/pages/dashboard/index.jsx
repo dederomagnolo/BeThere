@@ -10,6 +10,7 @@ import {Cards, MainContainer} from './styles';
 import {Graph} from './graph';
 import {isFromApp} from './utils';
 import { thingspeakUrl, bethereUrl} from '../../services/configs';
+import COMMANDS from '../../services/commands';
 
 const initialState = {
     measures: { 
@@ -49,7 +50,7 @@ export const Dashboard = () => {
     const updatePumpFromRemote = async () => {
         try{
             const pumpStatusResponse = await api.post(`${bethereUrl}/commands/laststatus`, {
-                commandName: "Pump Status"
+                commandName: COMMANDS.PUMP.NAME
             });
             
             const lastPumpStatus = _.get(pumpStatusResponse, 'data.value');
@@ -59,25 +60,26 @@ export const Dashboard = () => {
                 setFromApp(isCommandFromApp);
             }
 
-            if(lastPumpStatus === "1") {
+            if(lastPumpStatus === COMMANDS.PUMP.ON) {
                 setPumpFlag(true);
                 const today = moment();
-                console.log(moment().format('hh:mm:ss'));
                 const lastPumpUpdate = _.get(pumpStatusResponse, 'data.createdAt');
-                console.log(moment(lastPumpUpdate).format('hh:mm:ss'));
                 const interval = moment(today).diff(lastPumpUpdate);
                 const remainingTime = pumpTimeSetPoint - interval;
                 const d = moment.duration(remainingTime, 'milliseconds');
                 const secs = Math.floor(d.seconds());
-                const mins = Math.floor(d.asMinutes());
-                console.log(`${mins}:${secs}`);
-                setTimeLeft(`${mins}:${secs}`);
+                const mins = Math.floor(d.asMinutes());                
                
-                /* 
-                setSecondsLeft(seconds);
-                const minutes = moment(remainingTime).format('mm');
-                setMinutesLeft(minutes);
-                */
+                if(mins < 0 || secs < 0) {
+                    await api.post(`${bethereUrl}/send`, {
+                        commandName: "Pump Status",
+                        changedFrom: "App",
+                        value: COMMANDS.PUMP.OFF
+                    });
+                    setPumpFlag(false);
+                } else {
+                    setTimeLeft(`${mins}:${secs}`);
+                }
             } 
         } catch(err) {
           console.log(err);
@@ -113,8 +115,10 @@ export const Dashboard = () => {
             const today = moment().format('YYYY-MM-DD');
             const nextDay = moment().add(1, 'days').format('YYYY-MM-DD');
 
-            const queryStart = `${today}%2003:00:00`;
-            const queryEnd = `${nextDay}%2003:00:00`; //check this timezone to use utc
+            //const queryStart = `${today}%2003:00:00`;
+            //const queryEnd = `${nextDay}%2003:00:00`; //check this timezone to use utc
+            const queryStart = "2020-12-31%2003:00:00"
+            const queryEnd = "2021-01-01%2003:00:00"
 
             try {
                 const response = await api.get(`${thingspeakUrl}/fields/${fieldNumber}.json?start=${queryStart}&end=${queryEnd}`);  // 
@@ -151,6 +155,12 @@ export const Dashboard = () => {
             }
         }
 
+        // field 3: internal humidity
+        // field 4: internal temperature
+        // field 5: external humidity
+        // field 6: external temperature
+        // field 7: pump indicator
+
         updateFields(4);
         updateFields(6);
         updateFields(3);
@@ -181,22 +191,23 @@ export const Dashboard = () => {
     const updatePump = async () => { 
         try{
             const pumpStatusReponse = await api.post(`${bethereUrl}/commands/laststatus` , {
-                commandName: "Pump Status"
+                commandName: COMMANDS.PUMP.NAME
             });
             setBlockButtonFlag(true);
             const pumpStatus = _.get(pumpStatusReponse, 'data.value');
-            if(pumpStatus === "1") {
+            console.log(pumpStatus);
+            if(pumpStatus === COMMANDS.PUMP.ON) {
                 await api.post(`${bethereUrl}/send`, {
                     commandName: "Pump Status",
                     changedFrom: "App",
-                    value: "0"
+                    value: COMMANDS.PUMP.OFF
                 });
                 setPumpFlag(false);
             } else {
                 const commandRes = await api.post(`${bethereUrl}/send`, {
-                    commandName: "Pump Status",
+                    commandName: COMMANDS.PUMP.NAME,
                     changedFrom: "App",
-                    value: "1"
+                    value: COMMANDS.PUMP.ON
                 });
                 setPumpFlag(true);
                 const createdAt = _.get(commandRes, 'data.createdAt');
@@ -206,8 +217,6 @@ export const Dashboard = () => {
                 const d = moment.duration(remainingTime, 'milliseconds');
                 const secs = Math.floor(d.seconds());
                 const mins = Math.floor(d.asMinutes());
-                console.log(`${mins}:${secs}`);
-                setTimeLeft(`${mins}:${secs}`);
             }
             setBlockButtonFlag(false);
         } catch(err) {
@@ -241,6 +250,18 @@ export const Dashboard = () => {
                             setShowTemperatureChart(false);
                         }}
                     />
+                </Cards>
+                <Cards>
+                    {/* <NewCard 
+                            label={"CO2 (ppm)"} 
+                            icon={"asterisk"} 
+                            internalMeasure={measures.internalHumidity} 
+                            externalMeasure={measures.externalHumidity} 
+                            onClick={() => {
+                                setShowHumidityChart(true)
+                                setShowTemperatureChart(false);
+                            }}
+                    /> */}
                     <NewCard 
                         label={"Pump Control"} 
                         icon={"cog"}
@@ -259,7 +280,7 @@ export const Dashboard = () => {
                                 }
                             </div>
                             }
-                    >
+                        >
                     </NewCard>
                 </Cards>
                 {showTemperatureChart && temperatureData.length > 0 && <Graph chartData={temperatureData}/>}

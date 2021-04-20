@@ -6,6 +6,7 @@ import {
 import logOutImage from '../../assets/logout.png';
 import { clearUserState } from '../../store/user/actions';
 import { clearGlobalState } from '../../store/global/actions';
+import ninjaDefault from '../../assets/ninja.png';
 
 import {
   Container,
@@ -28,9 +29,9 @@ const Header = () => {
   return (
     <Container>
       {/* <AlertIcon /> */}
-      {/* <ProfilePicture>
-        <img src={} alt="foto do perfil"/>
-      </ProfilePicture> */}
+      <ProfilePicture>
+        <img src={ninjaDefault} alt="foto do perfil"/>
+      </ProfilePicture>
       <UserName>
         <p>
           {firstname} {lastname}

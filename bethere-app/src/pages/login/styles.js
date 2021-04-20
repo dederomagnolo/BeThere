@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import {rem} from 'polished';
 
 export const Container = styled.div`
   display: flex;
@@ -17,7 +18,7 @@ export const Container = styled.div`
 
 export const Form = styled.form`
   background-color: --white;
-  padding-top: 15px;
+  padding-top: ${rem('15px')};
   width: 100%;
   max-width: 300px;
   display: flex;
@@ -29,10 +30,10 @@ export const Input = styled.input`
   border: 1px solid #ddd;
   border-radius: 4px;
   height: 48px;
-  padding: 0 20px;
-  font-size: 16px;
+  padding: 0 ${rem('20px')};
+  font-size: ${rem('16px')};
   color: #666;
-  margin-top: 10px;
+  margin-top: ${('10px')};
   text-align: center;
 
   ::placeholder {
@@ -59,7 +60,9 @@ export const Logo = styled.div`
 `;
 
 export const Button = styled.button`
-  margin-top: 50px;
+  margin-top: ${rem('50px')};
+  margin-bottom: ${rem('50px')};
+  width: 100%;
   border: 2px solid #FFF;
   border-radius: 4px;
   height: 48px;
@@ -68,14 +71,35 @@ export const Button = styled.button`
   font-weight: bold;
   color: #FFF;
   cursor: ${(props) => props.disabled ? 'not-allowed' : 'pointer' } ;
-
+  transition: 0.3s;
+  
   &:hover{
-  background-color: var(--blue-forty-five-opacity);
+    background-color: var(--white);
+    border: 2px solid var(--blue-forty-five-opacity);
+    color: #1491a8d6;
   }
   &:active{
     background-color: var(--blue-forty-five-opacity);
   }
 `;
+
+export const ButtonsContainer = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+`
+
+export const FirstAccessLink = styled.div`
+  color: var(--white);
+  font-size: ${rem('18px')};
+  cursor: pointer;
+  transition: 0.3s;
+  
+  &:hover{
+    font-weight: bold;
+  }
+`
 
 export const InnerContainer = styled.div`
   display: flex;

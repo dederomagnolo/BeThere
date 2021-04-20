@@ -8,9 +8,10 @@ import {
 import PageContainer from './pageContainer';
 import { Container, Wrapper } from './styles';
 import { Dashboard } from '../../pages/dashboard';
-import Login from '../../pages/login';
 import { Charts } from '../charts';
-import { Settings } from '../settings';
+import { Settings } from '../../pages/settings';
+import Login from '../../pages/login';
+import Register from '../../pages/register';
 import MenuBar from '../menuBar';
 import Header from '../pageHeader';
 
@@ -29,6 +30,7 @@ const Layout = () => {
             <Route exact path="/" component={PageContainer(Dashboard)}/>
             <Route exact path="/charts" component={PageContainer(Charts)} />
             <Route exact path="/settings" component={PageContainer(Settings)}/>
+            <Route exact path="/hello-there" component={Register}/>
           </Switch>
         </Wrapper>
       </Router>

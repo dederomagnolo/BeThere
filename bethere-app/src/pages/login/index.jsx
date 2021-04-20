@@ -2,7 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ThreeBounce } from 'styled-spinkit';
 import { useHistory } from "react-router-dom";
-import { Container, Form, Button, Logo, InnerContainer } from './styles';
+import { 
+  Container, 
+  Form, 
+  Button, 
+  Logo, 
+  InnerContainer, 
+  ButtonsContainer,
+  FirstAccessLink 
+} from './styles';
 import logo from '../../assets/bethere_logo.png';
 import callApi from '../../services/callApi';
 import { Input } from '../../components/input';
@@ -27,8 +35,8 @@ const Login = () => {
   }, []);
 
   async function handleSubmit(e) {
-    const { username, password } = inputs;
     e.preventDefault();
+    const { username, password } = inputs;
 
     if(password.length < 10) {
       return alert("Username/Password incorrect"); 
@@ -39,18 +47,17 @@ const Login = () => {
     }
 
     dispatch(setGlobalLoading(true));
-
     const payload = {
       username,
       password
     };
-     
+       
     const res = await callApi(
       "POST", 
       "/auth/authenticate",
       payload
     );
-
+  
     if(res && res.token) {
       const token = res.token;
       const userInfo = res.user;
@@ -59,8 +66,8 @@ const Login = () => {
       dispatch(setGlobalLoading(false)); 
       history.push('/');
     } else {
+      alert("Usuário ou senha incorretos!");
       dispatch(setGlobalLoading(false)); 
-      alert("Error! Try again later.");
     }
   }
 
@@ -96,12 +103,18 @@ const Login = () => {
           {loading 
             ? <ThreeBounce color="#FFF"/> 
             : (
-                <Button 
-                  type="submit" 
-                  disabled={inputs.username === "" || inputs.password === ""}
-                >
-                  Entrar
-                </Button>
+                <ButtonsContainer>
+                  <Button 
+                    type="submit" 
+                    disabled={inputs.username === "" || inputs.password === ""}
+                  >
+                    Entrar
+                  </Button>
+
+                  <FirstAccessLink onClick={() => history.push('/hello-there')}>
+                    First access? Set up your device!
+                  </FirstAccessLink>
+                </ButtonsContainer>
               )}
         </Form>
       </InnerContainer>

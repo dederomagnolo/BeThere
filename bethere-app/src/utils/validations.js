@@ -30,11 +30,21 @@ const formatPhone = (phoneNumber) => {
     return hyphenated; 
 }
 
+const excludeMathChars = (e) => {
+    const invalidChars = ["-","+","e",];    
+    
+    if (invalidChars.includes(e.key)) {
+        return e.preventDefault();
+    }
+    return;
+}
+
 export {
     isEmailValid,
     isPasswordValid,
     allowOnlyNumbers,
     isPhoneValid,
     isDDDValid,
-    formatPhone
+    formatPhone,
+    excludeMathChars
 };

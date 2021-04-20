@@ -12,7 +12,6 @@ export const MenuCard = ({iconName, label, onClick, label2 }) => {
         > 
             <div className="cardContent">
                 <div className="labelBig">
-                    {label}
                 </div>
                 <div style={{paddingTop: '20px'}}>
                     <Icon name={iconName} />
