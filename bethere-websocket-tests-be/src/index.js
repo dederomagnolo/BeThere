@@ -33,7 +33,7 @@ wss.on('connection' , ws => {
     ws.id = uuid.v4();
 
     ws.on('message', async (message) => {
-        let deviceSerialKey = message.substr(0,2);
+        /* let deviceSerialKey = message.substr(0,2);
         if (deviceSerialKey === "$S") {
             deviceSerialKey = message.substr(2,deviceSerialKey.lenght);
             const deviceFound = await Device.findOne({deviceSerialKey});
@@ -54,10 +54,10 @@ wss.on('connection' , ws => {
                 // need to add here the call for settings of authenticated device
                 // need to send the variables as string in websocket message
             }
-        }
+        } */
 
         console.log(`Received message from ${ws.id}=> ${message}`);
-        if(message === "MP0") {
+        if(message === "R0") {
             await Command.create({
                 "commandName": "Pump Status",
                 "value": "0",
