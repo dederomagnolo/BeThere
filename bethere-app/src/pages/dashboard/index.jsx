@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Toggle from 'react-styled-toggle';
-import { Header } from '../../components/header';
+import {LeftArrow, RightArrow} from '@styled-icons/boxicons-regular';
 import * as _ from 'lodash';
 import moment from 'moment';
+import DayPickerInput from 'react-day-picker/DayPickerInput';
+import MomentLocaleUtils from 'react-day-picker/moment';
 import api from '../../services';
+import { Header } from '../../components/header';
 import { setColorId, isOdd, setMeasureId } from './utils';
 import {NewCard} from '../../components/newCard';
-import {Cards, MainContainer} from './styles';
+import {Cards, MainContainer, DateContainer} from './styles';
 import {Graph} from './graph';
 import {isFromApp} from './utils';
 import { thingspeakUrl, bethereUrl} from '../../services/configs';
 import COMMANDS from '../../services/commands';
+import 'react-day-picker/lib/style.css';
 
 const initialState = {
     measures: { 
@@ -21,12 +25,13 @@ const initialState = {
     }
 }
 
-const pumpTimeSetPoint = 600000;
+const pumpTimeSetPoint = 1200000;
 
 export const Dashboard = () => {
     const [pumpFlag, setPumpFlag] = useState(false);
     const [blockButtonFlag, setBlockButtonFlag] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
+    const [selectedDate, setSelectedDate] = useState(new Date());
 /*     const [minutes, setMinutesLeft] = useState(null);
     const [seconds, setSecondsLeft] = useState(null); */
     const [isCommandFromApp, setFromApp] = useState(false);
@@ -36,6 +41,7 @@ export const Dashboard = () => {
     const [humidityData, setHumidityData] = useState([]);
     const [showTemperatureChart, setShowTemperatureChart] = useState(true);
     const [showHumidityChart, setShowHumidityChart] = useState(false);
+    const { formatDate, parseDate } = MomentLocaleUtils;
     // Week Logics
     /* const lastWeekStartDate = moment().subtract(5, 'days').format("YYYY-MM-DD"); */
     /* const queryStart = `${lastWeekStartDate}%2000:00:00`; */
@@ -46,6 +52,22 @@ export const Dashboard = () => {
     // field 5: external humidity
     // field 6: external temperature
     // field 7: pump indicator
+
+    const handleDateChange = (date) => {
+        const momentDate = moment(date);
+        console.log(momentDate);
+        setSelectedDate(momentDate);
+    }
+
+    const goToNextDay = () => {
+        const nextDay = moment(selectedDate).add(1, 'days').format('YYYY/MM/DD');
+        setSelectedDate(nextDay);
+    }
+
+    const goToPreviousDay = () => {
+        const previousDay = moment(selectedDate).subtract(1, 'days').format('YYYY/MM/DD');
+        setSelectedDate(previousDay);
+    }
 
     const updatePumpFromRemote = async () => {
         try{
@@ -88,6 +110,8 @@ export const Dashboard = () => {
 
     const updateFeedFromRemote = async () => {
         try {
+            setTemperatureData([]);
+            setHumidityData([]);
             const lastFeed = await api.get(`${thingspeakUrl}/feeds/last.json`);
             const internalHumidity = _.get(lastFeed, 'data.field3');
             const internalTemperature = _.get(lastFeed, 'data.field4');
@@ -112,13 +136,13 @@ export const Dashboard = () => {
         updateFeedFromRemote();
 
         const updateFields = async (fieldNumber) => {
-            const today = moment().format('YYYY-MM-DD');
-            const nextDay = moment().add(1, 'days').format('YYYY-MM-DD');
+            //const today = moment().format('YYYY-MM-DD');
+            const nextDay = moment(selectedDate).add(1, 'days').format('YYYY-MM-DD');
 
-            //const queryStart = `${today}%2003:00:00`;
-            //const queryEnd = `${nextDay}%2003:00:00`; //check this timezone to use utc
-            const queryStart = "2020-12-31%2003:00:00"
-            const queryEnd = "2021-01-01%2003:00:00"
+            const queryStart = `${moment(selectedDate).format('YYYY-MM-DD')}%2003:00:00`;
+            const queryEnd = `${nextDay}%2003:00:00`; //check this timezone to use utc
+            /* const queryStart = "2020-12-31%2003:00:00"
+            const queryEnd = "2021-01-01%2003:00:00" */
 
             try {
                 const response = await api.get(`${thingspeakUrl}/fields/${fieldNumber}.json?start=${queryStart}&end=${queryEnd}`);  // 
@@ -166,27 +190,7 @@ export const Dashboard = () => {
         updateFields(3);
         updateFields(5);
 
-    }, []);
-
-
-   /*  useEffect(() => {
-        if (!seconds) return;
-        const intervalId = setInterval(() => {
-            console.log(seconds);
-        setSecondsLeft(Number(seconds) - 1);
-        }, 1000);
-
-        return () => clearInterval(intervalId);
-    }, [seconds]);
-
-    useEffect(() => {
-        if (!minutes) return;
-            const intervalId = setInterval(() => {
-            setSecondsLeft(minutes - 1);
-        }, 1000);
-
-        return () => clearInterval(intervalId);
-    }, [minutes]); */
+    }, [selectedDate]);
         
     const updatePump = async () => { 
         try{
@@ -198,7 +202,7 @@ export const Dashboard = () => {
             console.log(pumpStatus);
             if(pumpStatus === COMMANDS.PUMP.ON) {
                 await api.post(`${bethereUrl}/send`, {
-                    commandName: "Pump Status",
+                    commandName: COMMANDS.PUMP.NAME,
                     changedFrom: "App",
                     value: COMMANDS.PUMP.OFF
                 });
@@ -250,18 +254,6 @@ export const Dashboard = () => {
                             setShowTemperatureChart(false);
                         }}
                     />
-                </Cards>
-                <Cards>
-                    {/* <NewCard 
-                            label={"CO2 (ppm)"} 
-                            icon={"asterisk"} 
-                            internalMeasure={measures.internalHumidity} 
-                            externalMeasure={measures.externalHumidity} 
-                            onClick={() => {
-                                setShowHumidityChart(true)
-                                setShowTemperatureChart(false);
-                            }}
-                    /> */}
                     <NewCard 
                         label={"Pump Control"} 
                         icon={"cog"}
@@ -283,6 +275,35 @@ export const Dashboard = () => {
                         >
                     </NewCard>
                 </Cards>
+                {/* <Cards>
+                    <NewCard 
+                            label={"CO2 (ppm)"} 
+                            icon={"asterisk"} 
+                            internalMeasure={measures.internalHumidity} 
+                            externalMeasure={measures.externalHumidity} 
+                            onClick={() => {
+                                setShowHumidityChart(true)
+                                setShowTemperatureChart(false);
+                            }}
+                    />
+                </Cards> */}
+                <DateContainer>
+                    <LeftArrow fill="#1491a869" size={20} onClick={goToPreviousDay}/>
+                    <DayPickerInput
+                        formatDate={formatDate}
+                        format="DD/MM/YYYY"
+                        parseDate={parseDate}
+                        onDayChange={handleDateChange}
+                        value={moment(selectedDate).format('DD/MM/YYYY')}
+                        placeholder={'Select a date'}
+                        style={{ fontSize: '14px', marginTop: '10px' }}
+                        dayPickerProps={{
+                            locale: 'pt-br',
+                            localeUtils: MomentLocaleUtils,
+                        }}
+                    />
+                    <RightArrow fill="#1491a869" size={20} onClick={goToNextDay} />
+                </DateContainer>
                 {showTemperatureChart && temperatureData.length > 0 && <Graph chartData={temperatureData}/>}
                 {showHumidityChart && humidityData.length > 0 && <Graph chartData={humidityData}/>}
                 {/* {chartData.length > 0 && <Graph chartData={temperatureData}/>} */}

@@ -1,12 +1,16 @@
 import React, {useEffect, useState} from 'react';
 import Toggle from 'react-styled-toggle';
+import {ArrowIosDownwardOutline} from '@styled-icons/evaicons-outline/ArrowIosDownwardOutline';
+import {ArrowIosUpwardOutline} from '@styled-icons/evaicons-outline/ArrowIosUpwardOutline';
 import * as _ from 'lodash';
-import Select from 'react-select'
+import Select from 'react-select';
+import {Container} from 'react-grid-system';
+import Collapsible from 'react-collapsible';
 import '../../styles/styles.css';
 import api from '../../services';
 import {bethereUrl} from '../../services/configs';
-import {Container} from 'react-grid-system';
 import {Header} from '../../components/header';
+
 
 import {Option, OptionLabel, Button, Options, SubOptionLabel, Section, Input} from './styles';
 import commands from '../../services/commands';
@@ -83,41 +87,79 @@ export const Settings = () => {
             <Options>
                 <Section>
                     <Option className="backLightOption">
-                        <OptionLabel>
-                            LCD Backlight
-                        </OptionLabel>
-                        <Toggle
-                            disabled={loading}
-                            checked={backlightStatus} 
-                            onChange={() => handleSendCommand()}
-                        />
-                    </Option>
-                    <Option className="selectBackLightTime">
-                        <SubOptionLabel>
-                            Default time to turn backlight off
-                        </SubOptionLabel>
-                        <Select
-                            options={timeOptions} 
-                        />
-                        <SubOptionLabel>
-                            Default time to turn backlight on
-                        </SubOptionLabel>
-                        <Select
-                            options={timeOptions} 
-                        />
+                        <Collapsible 
+                            trigger={
+                                <div style={{display: 'flex', justifyContent: 'space-between', width: '100%'}} >
+                                    <OptionLabel>
+                                        LCD Backlight
+                                    </OptionLabel>
+                                    <ArrowIosDownwardOutline size={20} />
+                                </div>
+                            }
+                            triggerWhenOpen={
+                                <div style={{display: 'flex', justifyContent: 'space-between', width: '100%'}} >
+                                    <OptionLabel>
+                                        LCD Backlight
+                                    </OptionLabel>
+                                    <ArrowIosUpwardOutline size={20} />
+                                </div>
+                            }
+                            /* triggerStyle={<ArrowIosDownwardOutline size={20} />} */
+                            transitionTime={200}
+                        >
+                            <Option className="selectBackLightTime">
+                                <SubOptionLabel>Turn on</SubOptionLabel>   
+                                <Toggle
+                                    disabled={loading}
+                                    checked={backlightStatus} 
+                                    onChange={() => handleSendCommand()}
+                                />
+                                {/* <SubOptionLabel>
+                                    Default time to turn backlight off
+                                </SubOptionLabel>
+                                <Select
+                                    options={timeOptions} 
+                                />
+                                <SubOptionLabel>
+                                    Default time to turn backlight on
+                                </SubOptionLabel>
+                                <Select
+                                    options={timeOptions} 
+                                /> */}
+                            </Option>
+                        </Collapsible>
                     </Option>
                 </Section>
                 <Section>
-                    <Option>
-                        <OptionLabel>
-                            Manual Pump Timer
-                        </OptionLabel>
-                        <Input 
-                            placeholder={"minutes"} 
-                            type="number"
-                            min={0}
-                            max={1}
-                        />
+                    <Option>    
+                        <Collapsible
+                            trigger={
+                                <div style={{display: 'flex', justifyContent: 'space-between', width: '100%'}} >
+                                    <OptionLabel>
+                                        Pump
+                                    </OptionLabel>
+                                    <ArrowIosDownwardOutline size={20} />
+                                </div>
+                            }
+                            triggerWhenOpen={
+                                <div style={{display: 'flex', justifyContent: 'space-between', width: '100%'}} >
+                                    <OptionLabel>
+                                        Pump
+                                    </OptionLabel>
+                                    <ArrowIosUpwardOutline size={20} />
+                                </div>
+                            }
+                        >
+                            
+                                <SubOptionLabel>Manual timer</SubOptionLabel>
+                                <Input 
+                                    placeholder={"minutes"} 
+                                    type="number"
+                                    min={0}
+                                    max={1}
+                                />
+                            
+                        </Collapsible>
                     </Option>
                 </Section>
                 <Section>

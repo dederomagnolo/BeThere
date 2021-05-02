@@ -25,6 +25,10 @@ export const Option = styled.div`
         width: 130px;
         height: 40px;
     }
+
+    .Collapsible {
+        width: 100%;
+    }
 `
 export const OptionLabel = styled.div`
     font-size: 20px; 

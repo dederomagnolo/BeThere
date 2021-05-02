@@ -18,7 +18,7 @@ export const MainContainer = styled.div`
 `
 
 export const GraphContainer = styled.div`
-    padding-top: 40px;
+    padding-top: 10px;
     height: 300px;
     display: flex;
     justify-content: center;
@@ -27,5 +27,21 @@ export const GraphContainer = styled.div`
 
     @media screen and (max-width: 425px){
         width: 100%;
+    }
+`
+
+export const DateContainer = styled.div`
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 15px;
+
+    .DayPickerInput {
+        margin-top: 0 !important;
+        font-size: 20px !important;
+    }
+
+    input {
+        text-align: center;
     }
 `
