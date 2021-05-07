@@ -12,7 +12,7 @@
 #include <ArduinoWebsockets.h>
 #include <ESP8266WebServer.h>
 
-// Pins definition
+// #### PINS DEFINITION ####
 #define pinDHT 14 //D5
 #define typeDHT DHT22
 #define pumpInputRelay 16 // D0
@@ -20,48 +20,50 @@
 #define actionButton 12
 #define moistureInput A0
 
-using namespace websockets;
+// DHT sensor pins
+DHT dht(pinDHT, typeDHT);
 
-// Object declarations
-WiFiClient client;
-WebsocketsClient wsclient;
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-
-// WiFi Setup variables
+// #### DEVICE_SETTINGS ####
+// WiFi Server - Setup variables
 const char *ssid = "BeThere Access Point";
 const char *password = "welcome123";
 
-//Device serial number
-const char *serialKey = "9NYHA-8CJ0G-PFED7-S545L";
-
-// Start server
-ESP8266WebServer server(80);
-// Server settings
-IPAddress ap_local_IP(192,168,1,1);
-IPAddress ap_gateway(192,168,1,254);
-IPAddress ap_subnet(255,255,255,0);
-
+// WiFi - Direct connection
 //char ssid[] = "Satan`s Connection";
 //char password[] = "tininha157";
 
-// NTP - time configs
-const long utcOffsetInSeconds = -10800; //timezone adjustment
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
-
-// DHT sensor
-DHT dht(pinDHT, typeDHT);
+// Device serial number
+const char *serialKey = "9NYHA-8CJ0G-PFED7-S545L";
+// const char *serialKey = "7EY0T-FP5X2-EDYDW-WRLNH";
 
 // Thingspeak credentials
 unsigned long myChannelNumber = 700837;
 const char * myWriteAPIKey = "EZWNLFRNU5LW6XKU";
 
 // websocket infos
-const char* websocketServerHost = "192.168.0.12"; 
-const int websocketServerPort = 8080; 
-// const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
+const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
+const char* websocketServerHostLocal = "http://192.168.0.12"; 
+const char* websocketServerPort = "8080";
 
-// Variables declaration
+// #### OBJECT DECLARATIONS ####
+using namespace websockets;
+WiFiClient client;
+WebsocketsClient wsclient;
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// #### SERVER SETTINGS ####
+// Start server
+ESP8266WebServer server(80);
+// Server settings
+IPAddress ap_local_IP(192,168,1,1);
+IPAddress ap_gateway(192,168,1,254);
+IPAddress ap_subnet(255,255,255,0);
+// NTP - time settings
+const long utcOffsetInSeconds = -10800; //timezone adjustment
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
+
+// #### GLOBAL VARIABLES ####
 int pumpFlag = 0; 
 unsigned long beginCommandTimer = 0;
 unsigned long beginPumpTimer = 0;
@@ -75,6 +77,7 @@ float internalTemperature = 0;
 float internalHumidity = 0;
 bool withoutConfig; // flag to track auto ESP connection. without config means the user should configure the network
 bool settingsOn = false;
+bool devMode = true;
 
 const char INDEX_HTML[] =
 "<!DOCTYPE HTML>"
@@ -111,7 +114,8 @@ void setup() {
   // start server for access point
   WiFi.softAPConfig(ap_local_IP, ap_gateway, ap_subnet);
   WiFi.softAP(ssid, password);
-  // server routes
+  
+  // webserver routes
   server.on("/", handleRoot);
   server.on("/reset", handleResetConfig);
   server.begin();
@@ -129,7 +133,7 @@ void setup() {
   lcd.setCursor(0, 0);
 
   // try to auto connect with last session
-  //WiFi.getAutoConnect();
+  // WiFi.getAutoConnect();
   delay(5000);
 
   Serial.println(settings[0]);
@@ -137,7 +141,7 @@ void setup() {
   Serial.println(settings[2]);
   Serial.println(settings[3]);
   // begin wifi and try to connect
-  //  WiFi.begin(ssid, password);
+  // WiFi.begin(ssid, password);
   withoutConfig = false;
  
   while(WiFi.status() != WL_CONNECTED) {
@@ -167,9 +171,7 @@ void setup() {
   dht.begin();
   
   // connect with websocket server
-   bool connected = wsclient.connect(websocketServerHost, websocketServerPort, "/");
-  // bool connected = wsclient.connect(websocketServerHost);
-  
+  bool connected = wsclient.connect(getServerUri());;
   if(connected) {
     Serial.println("Connected with BeThere websocket server!");
     wsclient.send("BeThere is alive");
@@ -344,8 +346,9 @@ void loop() {
     Serial.println("reconnecting to websocket server...");
     lcd.setCursor(15,1);
     lcd.print("*");
-    wsclient.connect(websocketServerHost, websocketServerPort, "/");
-    // wsclient.connect(websocketServerHost);
+
+    bool connected = wsclient.connect(getServerUri());;
+
     wsclient.send("BeThere is alive!");
     wsclient.send(String("$S") + serialKey);
     pongTimer = millis();
@@ -451,8 +454,8 @@ void loop() {
       // ThingSpeak - Set fields
       ThingSpeak.setField(1, humidity);
       ThingSpeak.setField(2, temperature);
-//      ThingSpeak.setField(3, gasRS);
-//      ThingSpeak.setField(4, ppm);  
+      // ThingSpeak.setField(3, gasRS);
+      // ThingSpeak.setField(4, ppm);  
       // ThingSpeak - Write fields
       int response = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
       // Check status response
@@ -466,6 +469,14 @@ void loop() {
       }
   }
   delay(settings[2]);
+}
+
+String getServerUri () {
+  if(devMode) {
+    return String(websocketServerHostLocal) + ":" + String(websocketServerPort) + String("/?id=" + String(serialKey));
+  } else {
+    return websocketServerHost;  
+  }
 }
 
 void handleRoot() {

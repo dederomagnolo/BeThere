@@ -4,6 +4,7 @@ const { Server } = require('ws');
 const WebSocket = require('ws');
 const uuid = require('uuid');
 const moment = require('moment');
+const _ = require('lodash');
 const http = require('http');
 const cors = require('cors');
 
@@ -27,11 +28,18 @@ const server = http.createServer(app);
 
 const wss = new Server({ server });
 
-wss.on('connection' , ws => {
+const lookup = {};
+let index = 0;
+
+wss.on('connection' , (ws, req) => {
+    const receivedUrl = req.url;
+    const receivedParamsFromDevice = receivedUrl.split('/?');
+    const paramsSplitted = receivedParamsFromDevice[1].split('=');
     ws.isAlive = true;
     ws.send('Server touched!');
-    ws.id = uuid.v4();
-
+    ws.id = paramsSplitted[1]
+    index++;
+    lookup[index] = paramsSplitted[1]; // serialKey from device
     ws.on('message', async (message) => {
         /* let deviceSerialKey = message.substr(0,2);
         if (deviceSerialKey === "$S") {
@@ -46,7 +54,6 @@ wss.on('connection' , ws => {
                     ${minutesToMilliseconds(deviceSettings.pumpTimer)},
                     ${secondsToMilliseconds(deviceSettings.localMeasureInterval)},
                     ${minutesToMilliseconds(deviceSettings.remoteMeasureInterval)}, 
-                    0
                 `);
             } else {
                 ws.send("not authenticated!");
@@ -56,12 +63,17 @@ wss.on('connection' , ws => {
             }
         } */
 
+        if(message === 'BeThere Home is alive!') {
+            ws.id = `bethere_home_${ws.id}`;
+            console.log(ws.id);
+        }
+
         console.log(`Received message from ${ws.id}=> ${message}`);
-        if(message === "R0") {
+        if(message === "MP0") {
             await Command.create({
                 "commandName": "Pump Status",
                 "value": "0",
-                "changedFrom": "Client 1"
+                "changedFrom": ws.id,
             });
         }
 
@@ -69,7 +81,7 @@ wss.on('connection' , ws => {
             await Command.create({
                 "commandName": "Backlight",
                 "value": "LCD_OFF",
-                "changedFrom": "Client 1"
+                "changedFrom": ws.id
             });
         }
     });
@@ -104,11 +116,21 @@ const interval = setInterval(() => {
  */
 app.post('/send', async function (req, res) {
     const command = await Command.create(req.body);
-    console.log(req.body.value);
+    const userId = req.body.userId;
+    console.log(userId);
+    if(userId === '5fc8527005fe91002450390e') {
+        console.log("home");
+        const isBeThereHome = _.filter(wss.clients, (client) => {
+            const clientId = client.id;
+            console.log("filter");
+            console.log(client.id);
+        });
+        console.log(isBeThereHome);
+    }
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(req.body.value);
-          }
+        }
     })
     
     res.send(command);

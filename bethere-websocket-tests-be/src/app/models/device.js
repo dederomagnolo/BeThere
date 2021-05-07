@@ -10,13 +10,21 @@ const DeviceSchema = new mongoose.Schema({
         default: Date.now
     },
     userId: {
-        type: mongoose.Schema.Types.ObjectId, ref: 'User',  required: true
+        type: mongoose.Schema.Types.ObjectId, ref: 'User',  required: false
     },
     deviceName: {
         type: String,
         required: false
     },
-    settings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Settings',  require: false}]
+    settings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Settings',  require: false}],
+    available: {
+        type: Boolean,
+        default: true
+    },
+    planType: {
+        type: String,
+        required: false,
+    },
 });
 
 const Device = mongoose.model('Device', DeviceSchema);
