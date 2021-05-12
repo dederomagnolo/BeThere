@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import Toggle from 'react-styled-toggle';
 import {LeftArrow, RightArrow} from '@styled-icons/boxicons-regular';
 import * as _ from 'lodash';
 import moment from 'moment';
+import {useSelector} from 'react-redux';
 import DayPickerInput from 'react-day-picker/DayPickerInput';
 import MomentLocaleUtils from 'react-day-picker/moment';
 import api from '../../services';
-import { Header } from '../../components/header';
-import { setColorId, isOdd, setMeasureId } from './utils';
+import {Header} from '../../components/header';
+import {setColorId, isOdd, setMeasureId} from './utils';
 import {NewCard} from '../../components/newCard';
 import {Cards, MainContainer, DateContainer} from './styles';
 import {Graph} from './graph';
 import {isFromApp} from './utils';
-import { thingspeakUrl, bethereUrl} from '../../services/configs';
+import {thingspeakUrl, bethereUrl} from '../../services/configs';
 import COMMANDS from '../../services/commands';
 import 'react-day-picker/lib/style.css';
 
@@ -32,16 +33,14 @@ export const Dashboard = () => {
     const [blockButtonFlag, setBlockButtonFlag] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
-/*     const [minutes, setMinutesLeft] = useState(null);
-    const [seconds, setSecondsLeft] = useState(null); */
     const [isCommandFromApp, setFromApp] = useState(false);
-    const [pumpCountDown, setPumpCountDown] = useState("");
     const [measures, setMeasures] = useState(initialState.measures);
     const [temperatureData, setTemperatureData] = useState([]);
     const [humidityData, setHumidityData] = useState([]);
     const [showTemperatureChart, setShowTemperatureChart] = useState(true);
     const [showHumidityChart, setShowHumidityChart] = useState(false);
     const { formatDate, parseDate } = MomentLocaleUtils;
+    const userId = useSelector((state) => state.user._id);
     // Week Logics
     /* const lastWeekStartDate = moment().subtract(5, 'days').format("YYYY-MM-DD"); */
     /* const queryStart = `${lastWeekStartDate}%2000:00:00`; */
@@ -55,7 +54,6 @@ export const Dashboard = () => {
 
     const handleDateChange = (date) => {
         const momentDate = moment(date);
-        console.log(momentDate);
         setSelectedDate(momentDate);
     }
 
@@ -94,7 +92,8 @@ export const Dashboard = () => {
                
                 if(mins < 0 || secs < 0) {
                     await api.post(`${bethereUrl}/send`, {
-                        commandName: "Pump Status",
+                        userId,
+                        commandName: COMMANDS.PUMP.NAME,
                         changedFrom: "App",
                         value: COMMANDS.PUMP.OFF
                     });
@@ -202,6 +201,7 @@ export const Dashboard = () => {
             console.log(pumpStatus);
             if(pumpStatus === COMMANDS.PUMP.ON) {
                 await api.post(`${bethereUrl}/send`, {
+                    userId,
                     commandName: COMMANDS.PUMP.NAME,
                     changedFrom: "App",
                     value: COMMANDS.PUMP.OFF
@@ -209,6 +209,7 @@ export const Dashboard = () => {
                 setPumpFlag(false);
             } else {
                 const commandRes = await api.post(`${bethereUrl}/send`, {
+                    userId,
                     commandName: COMMANDS.PUMP.NAME,
                     changedFrom: "App",
                     value: COMMANDS.PUMP.ON
@@ -230,7 +231,7 @@ export const Dashboard = () => {
 
     return (
         <MainContainer>
-            <Header title="Dashboard"/>
+            <Header title="Dashboard" />
             <div>
                 {/* <span style={{fontSize: "20px"}}>Hello! Your garden looks good today:</span> */}
                 <Cards>

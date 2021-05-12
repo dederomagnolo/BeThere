@@ -1,9 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const _ = require('lodash');
 const authConfig = require('../../config/auth.json');
 
 const User = require('../models/user');
+const Device = require('../models/device');
 
 const router = express.Router();
 
@@ -47,10 +49,16 @@ router.post('/authenticate' , async (req, res) => {
     }
 
     user.password = undefined;
+    const userId = user._id;
+
+    const userDevices = await Device.find({userId}).populate('settings');
 
     res.send({ 
-        user, 
-        token: generateToken({id: user.id}
+        user: {
+            _id: userId,
+            devices: userDevices,
+        }, 
+        token: generateToken({id    : user.id}
     )});
 });
 

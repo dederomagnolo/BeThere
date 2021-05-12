@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import api from '../../services'
-import {Option, OptionLabel, Button} from './styles';
+import {Option, OptionLabel, ResetButton} from './styles';
 import {bethereUrl} from '../../services/configs';
 import commands from '../../services/commands';
 import { ThreeBounce } from 'styled-spinkit';
@@ -33,9 +33,9 @@ const ResetOption = ({loading, setLoading}) => {
             <p>
                 Check your internet connection before rebooting.
             </p>
-            <Button disabled={loading} onClick={() => handleReset()} >  
+            <ResetButton disabled={loading} onClick={() => handleReset()}>  
                 {reseting ? <ThreeBounce color={'white'} className="loader"/> : "Reset"}
-            </Button>
+            </ResetButton>
         </Option>
     );
 }

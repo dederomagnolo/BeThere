@@ -22,26 +22,29 @@ router.post('/verify' , async(req, res) => {
 router.post('/new' , async(req, res) => {
     try {
         const { deviceSerialKey, email, deviceName } = req.body; 
-        const productAvailable = await Device.find({deviceSerialKey, available: true});
-        
-        if(_.isEmpty(productAvailable) || !productAvailable) {
+        const productAvailable = await Device.find({deviceSerialKey, available: true});     
+        console.log(productAvailable[0].planType);   
+        console.log(_.isEmpty(productAvailable));
+        if(_.isEmpty(productAvailable)) {
             return res.status(400).send("Device already registered or invalid serial key");
         }
 
         const user = await User.findOne({email});
 
         if(productAvailable && productAvailable.length > 0 && user) {
-
+            const planType = _.get(productAvailable, '[0].planType');
+            const deviceId = _.get(productAvailable, '[0]._id'); 
             // associate valid user with device in bd
             const newDeviceData = {
-                planType: productAvailable[0].plantype,
-                deviceId: productAvailable[0]._id,
+                planType,
+                deviceId,
                 deviceName,
                 userId: user._id,
                 available: false
             }
 
-            const newDevice = await Device.findOneAndUpdate({deviceSerialKey, ...newDeviceData});
+            const newDevice = await Device.findOneAndUpdate({deviceSerialKey}, {...newDeviceData});
+
             
             // add default settings to a device
             const defaultSettings = {
@@ -51,10 +54,10 @@ router.post('/new' , async(req, res) => {
 
             const newDeviceSettings = await Settings.create(defaultSettings);
             newDevice.settings.push(newDeviceSettings);
-            newDevice.save();
+            await newDevice.save();
             
-            user.devices.push(newDevice);
-            user.save();
+            //const devices = user.devices.push(newDevice);
+            await User.findOneAndUpdate({email}, {devices: [...user.devices, newDevice]});
             await Device.findOneAndUpdate({deviceSerialKey}, {available: false});
             return res.send("Device assignated to user with success"); 
         } else {

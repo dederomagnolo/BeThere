@@ -57,12 +57,13 @@ router.post('/new' , async(req, res) => {
 router.post('/edit' , async(req, res) => {
     try {
         const {
-            deviceId,
+            settingsId,
             settingsName, 
             backlight, 
             pumpTimer, 
             localMeasureInterval, 
-            remoteMeasureInterval
+            remoteMeasureInterval,
+            wateringRoutine
         } = req.body;
 
         const dataToUpdate = {
@@ -70,10 +71,11 @@ router.post('/edit' , async(req, res) => {
             backlight,
             pumpTimer,
             localMeasureInterval,
-            remoteMeasureInterval
+            remoteMeasureInterval,
+            wateringRoutine
         }
 
-        await Settings.findOneAndUpdate({_id: deviceId}, {
+        await Settings.findOneAndUpdate({_id: settingsId, }, {
             $set: dataToUpdate
         });
 

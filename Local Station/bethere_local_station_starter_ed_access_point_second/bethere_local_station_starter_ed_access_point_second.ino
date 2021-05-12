@@ -12,7 +12,7 @@
 #include <ArduinoWebsockets.h>
 #include <ESP8266WebServer.h>
 
-// #### PINS DEFINITION ####
+// Pins definition
 #define pinDHT 14 //D5
 #define typeDHT DHT22
 #define pumpInputRelay 16 // D0
@@ -20,21 +20,38 @@
 #define actionButton 12
 #define moistureInput A0
 
-// DHT sensor pins
-DHT dht(pinDHT, typeDHT);
+using namespace websockets;
 
-// #### DEVICE_SETTINGS ####
-// WiFi Server - Setup variables
+// Object declarations
+WiFiClient client;
+WebsocketsClient wsclient;
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// WiFi Setup variables
 const char *ssid = "BeThere Access Point";
 const char *password = "welcome123";
 
-// WiFi - Direct connection
+//Device serial number
+// const char *serialKey = "9NYHA-8CJ0G-PFED7-S545L";
+const char *serialKey = "7EY0T-FP5X2-EDYDW-WRLNH";
+
+// Start server
+ESP8266WebServer server(80);
+// Server settings
+IPAddress ap_local_IP(192,168,1,1);
+IPAddress ap_gateway(192,168,1,254);
+IPAddress ap_subnet(255,255,255,0);
+
 //char ssid[] = "Satan`s Connection";
 //char password[] = "tininha157";
 
-// Device serial number
-const char *serialKey = "9NYHA-8CJ0G-PFED7-S545L";
-// const char *serialKey = "7EY0T-FP5X2-EDYDW-WRLNH";
+// NTP - time configs
+const long utcOffsetInSeconds = -10800; //timezone adjustment
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
+
+// DHT sensor
+DHT dht(pinDHT, typeDHT);
 
 // Thingspeak credentials
 unsigned long myChannelNumber = 700837;
@@ -42,39 +59,17 @@ const char * myWriteAPIKey = "EZWNLFRNU5LW6XKU";
 
 // websocket infos
 const char* websocketServerHost = "https://bethere-be.herokuapp.com/"; 
-const char* websocketServerHostLocal = "http://192.168.0.12"; 
+const char* websocketServerHostLocal = "192.168.0.12"; 
 const char* websocketServerPort = "8080";
+String wsUri = "";
 
-// #### OBJECT DECLARATIONS ####
-using namespace websockets;
-WiFiClient client;
-WebsocketsClient wsclient;
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-
-// #### SERVER SETTINGS ####
-// Start server
-ESP8266WebServer server(80);
-// Server settings
-IPAddress ap_local_IP(192,168,1,1);
-IPAddress ap_gateway(192,168,1,254);
-IPAddress ap_subnet(255,255,255,0);
-// NTP - time settings
-const long utcOffsetInSeconds = -10800; //timezone adjustment
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
-
-// #### GLOBAL VARIABLES ####
+// Variables declaration
 int pumpFlag = 0; 
 unsigned long beginCommandTimer = 0;
 unsigned long beginPumpTimer = 0;
 unsigned long pongTimer = 0;
-// 0 - backlight [exact hour - 24h]
-// 1 - pumpTimer [ms]
-// 2 - localMeasureInterval [ms]
-// 3 - remoteMeasureInterval [ms]
-// 4 - monitoringMinLimit [exact hour - 24h]
-// 5 - monitoringMaxLimit [exact hour - 24h]
-unsigned long settings[6] = {22,600000,3000,180000, 9, 18}; 
+// backlight, pumpTimer, localMeasureInterval, remoteMeasureInterval
+unsigned long settings[4] = {22,600000,3000,180000}; 
 unsigned long maxPongInterval= 41000;
 unsigned long lcdTimer = 0;
 unsigned long lcdTimerMaxInterval = 60000;
@@ -119,8 +114,7 @@ void setup() {
   // start server for access point
   WiFi.softAPConfig(ap_local_IP, ap_gateway, ap_subnet);
   WiFi.softAP(ssid, password);
-  
-  // webserver routes
+  // server routes
   server.on("/", handleRoot);
   server.on("/reset", handleResetConfig);
   server.begin();
@@ -138,7 +132,7 @@ void setup() {
   lcd.setCursor(0, 0);
 
   // try to auto connect with last session
-  // WiFi.getAutoConnect();
+  //WiFi.getAutoConnect();
   delay(5000);
 
   Serial.println(settings[0]);
@@ -146,7 +140,7 @@ void setup() {
   Serial.println(settings[2]);
   Serial.println(settings[3]);
   // begin wifi and try to connect
-  // WiFi.begin(ssid, password);
+  //  WiFi.begin(ssid, password);
   withoutConfig = false;
  
   while(WiFi.status() != WL_CONNECTED) {
@@ -176,7 +170,14 @@ void setup() {
   dht.begin();
   
   // connect with websocket server
-  bool connected = wsclient.connect(getServerUri());;
+  bool connected;
+  if(devMode) {
+    wsUri = String(websocketServerHostLocal) + String(websocketServerPort) + String("/");
+    connected = wsclient.connect("ws://" + String(wsUri));
+  } else { 
+    connected = wsclient.connect(websocketServerHost);
+  }
+   
   if(connected) {
     Serial.println("Connected with BeThere websocket server!");
     wsclient.send("BeThere is alive");
@@ -197,7 +198,7 @@ void setup() {
       Serial.println(message.data());
 
       if(settingsOn) { // command SETTINGS triggered. The default settings array will be overwriten
-        // backlight, pumpTimer, localMeasureInterval, remoteMeasureInterval, monitoringMinLimit, monitoringMaxLimit
+        // backlight, pumpTimer, localMeasureInterval, remoteMeasureInterval
         char commandArray[messageFromRemote.length()];
         messageFromRemote.toCharArray(commandArray, messageFromRemote.length());
         char *parsedSettings;
@@ -273,14 +274,9 @@ void loop() {
 //    ESP.restart();
 //  }
   
-  // get NTP time
+  // get time to turn off backlight in the night
   timeClient.update();
   int hours = timeClient.getHours();
-
-  // check time for monitoring 
-  if(hours > settings[4] && hours < settings[5]) {
-    Serial.println("count!"); 
-  }
 
 //  if(lcdTimer > 0) {
 //    if(millis() - lcdTimer > lcdTimerMaxInterval) {
@@ -357,8 +353,14 @@ void loop() {
     lcd.setCursor(15,1);
     lcd.print("*");
 
-    bool connected = wsclient.connect(getServerUri());;
-
+    bool connected;
+    if(devMode) {
+      wsUri = String(websocketServerHostLocal) + String(websocketServerPort) + String("/");
+      connected = wsclient.connect("ws://" + String(wsUri));
+      wsclient.connect(wsUri);
+    } else {
+      wsclient.connect(websocketServerHost);
+    } 
     wsclient.send("BeThere is alive!");
     wsclient.send(String("$S") + serialKey);
     pongTimer = millis();
@@ -464,8 +466,8 @@ void loop() {
       // ThingSpeak - Set fields
       ThingSpeak.setField(1, humidity);
       ThingSpeak.setField(2, temperature);
-      // ThingSpeak.setField(3, gasRS);
-      // ThingSpeak.setField(4, ppm);  
+//      ThingSpeak.setField(3, gasRS);
+//      ThingSpeak.setField(4, ppm);  
       // ThingSpeak - Write fields
       int response = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
       // Check status response
@@ -479,14 +481,6 @@ void loop() {
       }
   }
   delay(settings[2]);
-}
-
-String getServerUri () {
-  if(devMode) {
-    return String(websocketServerHostLocal) + ":" + String(websocketServerPort) + String("/?id=" + String(serialKey));
-  } else {
-    return websocketServerHost;  
-  }
 }
 
 void handleRoot() {

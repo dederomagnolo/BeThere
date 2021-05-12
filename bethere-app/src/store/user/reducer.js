@@ -7,7 +7,7 @@ import * as _ from 'lodash';
 
 const INITIAL_STATE = {
     token: "",
-    info: {},
+    devices: []
 }
 
 export const UserReducer = (
@@ -24,7 +24,7 @@ export const UserReducer = (
         case "SET_USER_INFO": {
             return {
                 ...state,
-                info: action.payload
+                ...action.payload
             }
         }
         case "persist/REHYDRATE": {

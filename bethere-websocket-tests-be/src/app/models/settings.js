@@ -32,6 +32,25 @@ const SettingsSchema = new mongoose.Schema({
         type: Number,
         required: false,
         default: 15 //mins
+    },
+    wateringRoutine: {
+        enabled: {
+            type: Boolean,
+            required: true,
+            default: false
+        },
+        startTime: {
+            type: Number
+        },
+        endTime: {
+            type: Number
+        },
+        interval: {
+            type: Number
+        },
+        duration: {
+            type: Number
+        } 
     }
 });
 

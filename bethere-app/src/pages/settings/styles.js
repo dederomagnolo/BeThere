@@ -7,6 +7,12 @@ export const Options = styled.div`
     }
 `;
 
+export const CollapsibleHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+`
+
 export const Section = styled.div`
     border-bottom: solid 1px gray;
 
@@ -30,6 +36,11 @@ export const Option = styled.div`
         width: 100%;
     }
 `
+
+export const SubOption = styled(Option)`
+    align-items: center;
+`
+
 export const OptionLabel = styled.div`
     font-size: 20px; 
     padding-right: 10px;
@@ -41,24 +52,31 @@ export const SubOptionLabel = styled.div`
 
 export const Button = styled.button`
     cursor: pointer;
-    font-size: 20px;
+    
     text-align: center;
     display: flex;
     justify-content: center;
-
-    background: #ff8181;
+    background: var(--blue-forty-five-opacity);
     color: white;
     padding: 8px;
     border-radius: 8px;
-    width: 90px;
+    width: 120px;
     outline:none;
     transition: 0.1s;
     &:hover{
-    background-color: red;
+    background-color: var(--tertiary);
     }
 
     .loader {
         margin: 0;
+    }
+`
+
+export const ResetButton = styled(Button)`
+    background: #ff8181;
+    font-size: 18px;
+    &:hover{
+        background-color: red;
     }
 `
 
