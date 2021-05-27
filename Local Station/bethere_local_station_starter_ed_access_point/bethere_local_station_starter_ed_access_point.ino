@@ -33,8 +33,11 @@ const char *password = "welcome123";
 //char password[] = "tininha157";
 
 // Device serial number
-const char *serialKey = "9NYHA-8CJ0G-PFED7-S545L";
+// const char *serialKey = "9NYHA-8CJ0G-PFED7-S545L";
 // const char *serialKey = "7EY0T-FP5X2-EDYDW-WRLNH";
+
+// prod serial
+const char *serialKey = "35U2I-MAQOO-EXQX5-U43PI";
 
 // Thingspeak credentials
 unsigned long myChannelNumber = 700837;
@@ -65,24 +68,29 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
 // #### GLOBAL VARIABLES ####
 int pumpFlag = 0; 
-unsigned long beginCommandTimer = 0;
+unsigned long beginSendMeasureTimer = 0;
 unsigned long beginPumpTimer = 0;
 unsigned long pongTimer = 0;
+unsigned long beginWateringRoutineTimer = 0;
 // 0 - backlight [exact hour - 24h]
-// 1 - pumpTimer [ms]
-// 2 - localMeasureInterval [ms]
-// 3 - remoteMeasureInterval [ms]
-// 4 - monitoringMinLimit [exact hour - 24h]
-// 5 - monitoringMaxLimit [exact hour - 24h]
-unsigned long settings[6] = {22,600000,3000,180000, 9, 18}; 
+// 1 - pumpTimer [ms] [default: 10min (600000)]
+// 2 - localMeasureInterval [ms] [default: 3s (3000ms)]
+// 3 - remoteMeasureInterval [ms] [default: 3min (180000ms)]
+// 4 - wateringRoutineStartTime [exact hour - 24h]
+// 5 - wateringRoutineEndTimer [exact hour - 24h]
+// 6 - wateringRoutinePumpDuration [default: 2 min (900000)]
+// 7 - wateringRoutineInterval [default: 15 min (900000)]
+unsigned long settings[8] = {22,600000,3000,180000,9,23,30000 ,120000}; 
 unsigned long maxPongInterval= 41000;
 unsigned long lcdTimer = 0;
-unsigned long lcdTimerMaxInterval = 60000;
+// unsigned long lcdTimerMaxInterval = 60000;
 float internalTemperature = 0;
 float internalHumidity = 0;
 bool withoutConfig; // flag to track auto ESP connection. without config means the user should configure the network
 bool settingsOn = false;
-bool devMode = true;
+bool devMode = false;
+bool wateringRoutineMode = true;
+bool manualPump = false;
 
 const char INDEX_HTML[] =
 "<!DOCTYPE HTML>"
@@ -196,8 +204,9 @@ void setup() {
       Serial.print("Message from server: ");
       Serial.println(message.data());
 
-      if(settingsOn) { // command SETTINGS triggered. The default settings array will be overwriten
-        // backlight, pumpTimer, localMeasureInterval, remoteMeasureInterval, monitoringMinLimit, monitoringMaxLimit
+// SETTINGS triggered. The default settings array will be overwriten
+// backlight, pumpTimer, localMeasureInterval, remoteMeasureInterval, monitoringMinLimit, monitoringMaxLimit
+      if(settingsOn) { 
         char commandArray[messageFromRemote.length()];
         messageFromRemote.toCharArray(commandArray, messageFromRemote.length());
         char *parsedSettings;
@@ -222,6 +231,7 @@ void setup() {
           ESP.restart();
       }
 
+      // LCD
       if(messageFromRemote == "LCD_ON") {
         lcdTimer = millis();
         lcd.backlight();
@@ -233,10 +243,25 @@ void setup() {
         }
         lcd.noBacklight();
       }
-      
-      // change pump 
+
+      // WATERING ROUTINE
+      if(messageFromRemote == "WR_ON") {
+        wateringRoutineMode = true;
+        beginWateringRoutineTimer = millis();
+      }
+
+      if(messageFromRemote == "WR_OFF") {
+        wateringRoutineMode = false;
+        beginWateringRoutineTimer = 0;
+      }
+
+      if(messageFromRemote == "WR_PUMP_OFF") {
+        digitalWrite(pumpInputRelay, HIGH);
+        beginWateringRoutineTimer = millis();
+      }
+
+      // CHANGE PUMP STATUS
       if(messageFromRemote == "MP0") {
-        
         digitalWrite(pumpInputRelay, HIGH);
         beginPumpTimer = 0;
       }
@@ -244,6 +269,7 @@ void setup() {
       if(messageFromRemote == "MP1") {
         digitalWrite(pumpInputRelay, LOW);
         beginPumpTimer = millis();
+        manualPump = true;
       } else {
         int lastStat = digitalRead(pumpInputRelay);
         digitalWrite(pumpInputRelay, lastStat);
@@ -276,12 +302,7 @@ void loop() {
   // get NTP time
   timeClient.update();
   int hours = timeClient.getHours();
-
-  // check time for monitoring 
-  if(hours > settings[4] && hours < settings[5]) {
-    Serial.println("count!"); 
-  }
-
+  int minutes = timeClient.getMinutes();
 //  if(lcdTimer > 0) {
 //    if(millis() - lcdTimer > lcdTimerMaxInterval) {
 //      lcd.noBacklight();
@@ -365,8 +386,8 @@ void loop() {
   }
   
   // control pump from remote - manual mode
-  if(beginPumpTimer > 0) {
-    Serial.println("Remote mode activated");
+  if(manualPump && beginPumpTimer > 0) {
+    Serial.println("Remote manual mode activated");
     wsclient.send("MP1"); 
     if(millis() - beginPumpTimer > settings[1]){
       digitalWrite(pumpInputRelay, HIGH);
@@ -377,6 +398,38 @@ void loop() {
       Serial.println("Pump is on!");
     }
   }
+
+  // control pump from remote - watering routine mode
+  if(!manualPump && wateringRoutineMode && beginPumpTimer > 0) {
+    Serial.println("Watering routine mode - WATERING ON");
+    wsclient.send("WR_PUMP_ON");
+    digitalWrite(pumpInputRelay, LOW);
+    Serial.println(millis() - beginPumpTimer);
+    if(millis() - beginPumpTimer > settings[6]){
+      digitalWrite(pumpInputRelay, HIGH);
+      beginPumpTimer = 0;
+      wsclient.send("WR_PUMP_OFF"); 
+      Serial.println("Auto Watering - Pump finished the work!");
+    } else {
+      Serial.println("Auto Watering - Pump is on!");
+    }
+  }
+  
+  if(wateringRoutineMode) {
+    Serial.print(hours);
+    Serial.print(":");
+    Serial.println(minutes);
+    // check start time and end time for configured watering routine 
+    if(hours > settings[4] && hours < settings[5]) {
+      Serial.println("count!");
+      if(millis() - beginWateringRoutineTimer > settings[7]) { // check if the interval has passed;
+        Serial.print("interval has passed");
+        Serial.println("########################################");
+        beginPumpTimer = millis(); // start pump timer
+        beginWateringRoutineTimer = millis();
+      }
+    }
+  } 
 
   // Read MQ135 sensor
   // int analogGasMeasure = analogRead(gasInput);
@@ -447,8 +500,6 @@ void loop() {
 //  lcd.setCursor(14 ,0);
 //  lcd.print(" ");
   
-  delay(200);
-  
   //Just for debug - print in serial monitor
   Serial.println("H:" + String(humidity) + "T:" + String(temperature));
 
@@ -459,7 +510,7 @@ void loop() {
   //    yield();
   //  }
 
-  if(millis() - beginCommandTimer > settings[3]) {
+  if(millis() - beginSendMeasureTimer > settings[3]) {
       Serial.println("Sending data..."); 
       // ThingSpeak - Set fields
       ThingSpeak.setField(1, humidity);
@@ -472,12 +523,13 @@ void loop() {
       Serial.println(response);
       if (response == 200){
         Serial.println("Data sent with success!");
-        beginCommandTimer = millis();
+        beginSendMeasureTimer = millis();
         
       } else{
         Serial.println("Coneection Error: " + String(response));
       }
   }
+  ESP.wdtFeed();
   delay(settings[2]);
 }
 

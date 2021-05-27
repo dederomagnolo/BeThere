@@ -37,7 +37,7 @@ unsigned long maxPongInterval = 42000; // 40 secs
 // 5 - wateringRoutineEndTimer [exact hour - 24h]
 // 6 - wateringRoutinePumpDuration [default: 5 min (900000)]
 // 7 - wateringRoutineInterval [default: 30 min (900000)]
-unsigned long settings[8] = {22, 1200000, 3000, 900000, 9, 18, 300000 , 1800000};
+unsigned long settings[8] = {22, 1200000, 3000, 1800000, 9, 18, 300000 , 1800000};
 float internalTemperature = 0;
 float internalHumidity = 0;
 // Flags
@@ -260,20 +260,17 @@ void setup() {
       }
       settingsOn = false;
       // to check received settings
-      //      Serial.println("######################");
-      //      for (int i = 0; i < 8; i++)
-      //      {
-      //        Serial.println(settings[i]);
-      //      }
+            Serial.println("######################");
+            for (int i = 0; i < 8; i++)
+            {
+              Serial.println(settings[i]);
+            }
     }
 
     if (messageFromRemote.indexOf("time") != -1) {
       hours = messageFromRemote.substring(5, 7).toInt();
       minutes = messageFromRemote.substring(8, 10).toInt();
-      Serial.println(hours);
-      Serial.println(minutes);
     }
-
 
     if (messageFromRemote == "SETTINGS") {
       settingsOn = true;
@@ -316,6 +313,7 @@ void setup() {
     if (messageFromRemote == "MP0") {
       digitalWrite(pumpInputRelay, HIGH);
       beginPumpTimer = 0;
+      manualPump = false;
     }
 
     if (messageFromRemote == "MP1") {
@@ -417,6 +415,7 @@ void loop() {
       beginPumpTimer = 0;
       wsclient.send("MP0");
       Serial.println("Pump finished the work!");
+      manualPump = false;
     } else {
       Serial.println("Pump is on!");
     }
@@ -439,9 +438,6 @@ void loop() {
   }
 
   if (wateringRoutineMode) {
-    Serial.print(hours);
-    Serial.print(":");
-    Serial.println(minutes);
     // check start time and end time for configured watering routine
     if (hours > settings[4] && hours < settings[5]) {
       if (millis() - beginWateringRoutineTimer > settings[7]) { // check if the interval has passed;

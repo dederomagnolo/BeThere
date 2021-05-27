@@ -7,6 +7,7 @@ const moment = require('moment');
 const _ = require('lodash');
 const http = require('http');
 const cors = require('cors');
+const tz = require('moment-timezone');
 
 const Command = require('./app/models/command');
 const Device = require('./app/models/device');
@@ -20,7 +21,7 @@ app.use(cors());
 
 app.get('/', (req, res) => {
     res.send("BeThere WebSocket - Home");
-})
+});
 
 require('./app/controllers/index')(app); //importa controllers
 
@@ -31,15 +32,65 @@ const wss = new Server({ server });
 const lookup = {};
 let index = 0;
 
-wss.on('connection' , (ws, req) => {
+wss.on('connection' , async (ws, req) => {
     const receivedUrl = req.url;
-    const receivedParamsFromDevice = receivedUrl.split('/?');
-    const paramsSplitted = receivedParamsFromDevice[1].split('=');
+    let paramsSplitted;
+    
+    // check url params to get device serial key
+    if(req.url) {
+        const receivedParamsFromDevice = receivedUrl.split('/?');
+        console.log(receivedParamsFromDevice);
+        if(receivedParamsFromDevice) {
+            paramsSplitted = receivedParamsFromDevice[1].split('=');
+        }
+    }
+
     ws.isAlive = true;
     ws.send('Server touched!');
-    ws.id = paramsSplitted[1]
+    // change ws id to serial key if it exists
+    if(paramsSplitted.length > 0) {
+        ws.id = paramsSplitted[1];
+    }
+    // add device to list of connected devices
     index++;
     lookup[index] = paramsSplitted[1]; // serialKey from device
+
+    // send command
+    // search serial key to send settings
+    const device = await Device.findOne({deviceSerialKey: ws.id});
+    let deviceSettings;
+    if(device) {
+        deviceSettings = await Settings.findOne({deviceId: device.id});
+    }
+    if(deviceSettings) {
+        const {
+            backlight, 
+            pumpTimer, 
+            localMeasureInterval,
+            remoteMeasureInterval,
+            wateringRoutine
+        } = deviceSettings;
+
+        const {
+            enabled, 
+            startTime, 
+            endTime, 
+            interval, 
+            duration
+        } = wateringRoutine;
+
+        if(enabled) {
+            ws.send('WR_ON');
+        } else {
+            ws.send('WR_OFF');
+        }
+
+        ws.send('SETTINGS');
+        const settingsString = `${backlight},${minutesToMilliseconds(pumpTimer)},${secondsToMilliseconds(localMeasureInterval)},${minutesToMilliseconds(remoteMeasureInterval)},${startTime},${endTime},${minutesToMilliseconds(duration)},${minutesToMilliseconds(interval)}`;
+        console.log(settingsString);
+        ws.send(settingsString);
+    }
+
     ws.on('message', async (message) => {
         /* let deviceSerialKey = message.substr(0,2);
         if (deviceSerialKey === "$S") {
@@ -65,58 +116,54 @@ wss.on('connection' , (ws, req) => {
 
         if(message === 'BeThere Home is alive!') {
             ws.id = `bethere_home_${ws.id}`;
-            console.log(ws.id);
         }
 
         console.log(`Received message from ${ws.id}=> ${message}`);
         if(message === "MP0") {
             await Command.create({
-                "commandName": "Pump Status",
-                "value": "0",
+                "categoryName": "Manual Pump",
+                "commandName": "MP0",
                 "changedFrom": ws.id,
             });
         }
 
-        if(message === "LCD_OFF"){
+        if(message === "LCD_OFF") {
             await Command.create({
-                "commandName": "Backlight",
-                "value": "LCD_OFF",
+                "categoryName": "Backlight",
+                "commandName": "LCD_OFF",
                 "changedFrom": ws.id
             });
         }
+
+        if(message === "WR_PUMP_ON") {
+            await Command.create({
+                "categoryName": "Watering Routine",
+                "changedFrom": ws.id,
+                "commandName": "WR_PUMP_ON"
+            });
+        }
     });
+
     ws.on('close', () => {
-        console.log("on close");
-        clearInterval(interval);
         console.log('Client disconnected');
+        clearInterval(ws.timer);
         ws.terminate();
     });
+
+    ws.timer = setInterval(function(){
+        pingpong(ws);
+    },30000);
 });
 
-const interval = setInterval(() => {
-    wss.clients.forEach((client) => {
-        console.log(client.id);
-        client.send("beat");
-    });
-}, 30000);
+function pingpong(ws) {
+    console.log(ws.id+' send a ping');
+    ws.send(`time#${moment().tz('America/Sao_Paulo').format('HH:mm')}`);
+    ws.ping('coucou',{},true);
+}
 
-/* const interval = setInterval(function ping() {
-    wss.clients.forEach(ws => {
-        console.log('this interval')
-        console.log(ws.isAlive);
-        if (ws.isAlive === false) return ws.terminate();
-        ws.ping();
-        ws.isAlive = false;
-    });
-}, 30000); */
-
-/* wss.on('close', function close() {
-    clearInterval(interval);
-});
- */
 app.post('/send', async function (req, res) {
     const command = await Command.create(req.body);
-    const userId = req.body.userId;
+    /* const userId = req.body.userId;
     console.log(userId);
     if(userId === '5fc8527005fe91002450390e') {
         console.log("home");
@@ -126,13 +173,15 @@ app.post('/send', async function (req, res) {
             console.log(client.id);
         });
         console.log(isBeThereHome);
-    }
+    } */
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(req.body.value);
+            client.send(req.body.commandName);
+            if(req.body.commandName === "SETTINGS") {
+                client.send(req.body.value);
+            }
         }
-    })
-    
+    });
     res.send(command);
 });
 

@@ -27,6 +27,13 @@ export const UserReducer = (
                 ...action.payload
             }
         }
+        case "UPDATE_DEVICE_SETTINGS": {
+            const deviceToUpdate = _.findIndex(state.devices, (device) => device._id === action.payload);
+            console.log(deviceToUpdate);
+            return {
+                ...state
+            }
+        }
         case "persist/REHYDRATE": {
 
             return {

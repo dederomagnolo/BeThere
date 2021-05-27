@@ -55,6 +55,7 @@ router.post('/new' , async(req, res) => {
 });
 
 router.post('/edit' , async(req, res) => {
+    console.log(req.body);
     try {
         const {
             settingsId,
@@ -66,13 +67,27 @@ router.post('/edit' , async(req, res) => {
             wateringRoutine
         } = req.body;
 
+        const {
+            duration,
+            interval,
+            startTime,
+            endTime,
+            enabled
+        } = wateringRoutine;
+
         const dataToUpdate = {
             settingsName,
             backlight,
             pumpTimer,
             localMeasureInterval,
             remoteMeasureInterval,
-            wateringRoutine
+            wateringRoutine: {
+                enabled,
+                duration,
+                interval,
+                startTime,
+                endTime
+            }
         }
 
         await Settings.findOneAndUpdate({_id: settingsId, }, {

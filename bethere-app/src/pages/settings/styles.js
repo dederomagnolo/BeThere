@@ -39,6 +39,11 @@ export const Option = styled.div`
 
 export const SubOption = styled(Option)`
     align-items: center;
+    margin-left: 10px;
+
+    .secondSubOption {
+        margin-left: 10px;
+    }
 `
 
 export const OptionLabel = styled.div`

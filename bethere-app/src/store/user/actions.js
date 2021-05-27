@@ -18,5 +18,12 @@ export function clearUserState() {
   }
 }
 
+export function updateDeviceSettings(payload) {
+  return {
+    type: "UPDATE_DEVICE_SETTINGS",
+    payload
+  }
+}
+
 
   

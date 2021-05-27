@@ -2,11 +2,12 @@ import React, {useEffect, useState} from 'react';
 import Toggle from 'react-styled-toggle';
 import * as _ from 'lodash';
 import Select from 'react-select';
-import {useSelector} from 'react-redux';
+import {useSelector, useDispatch} from 'react-redux';
 import {ArrowIosDownwardOutline} from '@styled-icons/evaicons-outline/ArrowIosDownwardOutline';
 import {ArrowIosUpwardOutline} from '@styled-icons/evaicons-outline/ArrowIosUpwardOutline';
 import {Container} from 'react-grid-system';
 import Collapsible from 'react-collapsible';
+import {Pulse} from 'styled-spinkit';
 import '../../styles/styles.css';
 import api from '../../services';
 import {bethereUrl} from '../../services/configs';
@@ -22,30 +23,30 @@ import {
     Input, 
     CollapsibleHeader
 } from './styles';
-import commands from '../../services/commands';
+import COMMANDS from '../../services/commands';
 import ResetOption from './reset';
 import { getUserDevices, getUserId } from '../../store/user/selectors';
+import {updateDeviceSettings} from '../../store/user/actions';
+import sendCommand from '../../services/sendCommand';
+import {minutesToMilliseconds, secondsToMilliseconds} from '../../utils/functions';
 
 export const Settings = () => {
     const userDevices = useSelector(getUserDevices);
     const userId = useSelector(getUserId);
+    const dispatch = useDispatch();
     const [loading, setLoading] = useState(false);
-    const [routinePayload, setRoutinePayload] = useState({
-		enabled: false,
-		startTime: null,
-		endTime: null,
-		interval: null,
-		duration: null
-	});
-    const [selectedDevice, setSelectedDevice] = useState(userDevices[0]._id);
+    const [selectedDevice, setSelectedDevice] = useState(_.get(userDevices, '[0]._id'));
     const [deviceSettings, setDeviceSettings] = useState(null);
     const wateringRoutineSettings = _.get(deviceSettings, 'wateringRoutine');
     const wateringRoutineEnabled = _.get(wateringRoutineSettings, 'enabled');
-    const duration = _.get(wateringRoutineSettings, 'duration');
-    const interval = _.get(wateringRoutineSettings, 'interval');
-    const startTime = _.get(wateringRoutineSettings, 'startTime');
-    const endTime = _.get(wateringRoutineSettings, 'endTime');
     const [showWorkingRoutineOptions, setShowWorkingRoutineOptions] = useState(wateringRoutineEnabled);
+    const [routinePayload, setRoutinePayload] = useState({
+		enabled: wateringRoutineEnabled,
+		startTime: _.get(wateringRoutineSettings, 'startTime'),
+		endTime: _.get(wateringRoutineSettings, 'endTime'),
+		interval: _.get(wateringRoutineSettings, 'interval'),
+		duration: _.get(wateringRoutineSettings, 'duration')
+	});
     const [backlightStatus, setBacklightStatus] = useState(false);
     const timeOptions = [];
     const userDeviceOptions = _.map(userDevices, (device) => {
@@ -54,8 +55,6 @@ export const Settings = () => {
             label: device.deviceSerialKey
         }
     });
-
-    console.log(showWorkingRoutineOptions);
 
     for(let i = 0; i < 24 ; i++) {
         timeOptions.push({
@@ -67,26 +66,68 @@ export const Settings = () => {
         return _.find(timeOptions, (option) => option.value === value);
     }
 
-    const handleShowRoutineOptions = () => {
-        setRoutinePayload({...routinePayload, enabled: !showWorkingRoutineOptions})
+    const handleShowRoutineOptions = async () => {
+        if(showWorkingRoutineOptions) {
+            await handleEditRoutine();
+            await sendCommand("WATERING_AUTO_OFF");
+        }
         setShowWorkingRoutineOptions(!showWorkingRoutineOptions);
+        setRoutinePayload({...routinePayload, enabled: !showWorkingRoutineOptions});
     }
 
-    const handleChangeBacklightStatus = async () => {
-        setLoading(true);
+    const handleEditRoutine = async () => {
         try {
-            const res = await api.post(`${bethereUrl}/settings/edit`, {
+            setLoading(true);
+            const {
+                localMeasureInterval, 
+                remoteMeasureInterval, 
+                pumpTimer, 
+                backlight, 
+            } = deviceSettings;
+
+            const { 
+                startTime,
+                endTime,
+                interval,
+                duration
+            } = routinePayload
+
+            const editSettingsResponse = await api.post(`${bethereUrl}/settings/edit` , {
                 userId,
-                settingsId: deviceSettings._id,
-                deviceId: _.find(userDevices, (device) => selectedDevice === device._id)
+                deviceId: selectedDevice,
+                settingsId: _.get(deviceSettings, '_id'),
+                localMeasureInterval,
+                remoteMeasureInterval,
+                pumpTimer,
+                backlight,
+                wateringRoutine: {
+                    startTime: startTime,
+                    endTime: endTime,
+                    interval: interval,
+                    duration: duration,
+                    enabled: showWorkingRoutineOptions
+                }
             });
-        } catch (err){
+
+            if(showWorkingRoutineOptions) {
+                await sendCommand('WATERING_AUTO_ON');
+                await sendCommand(
+                    'SETTINGS_ON', 
+                    `${backlight},${minutesToMilliseconds(pumpTimer)},${secondsToMilliseconds(localMeasureInterval)},${minutesToMilliseconds(remoteMeasureInterval)},${startTime},${endTime},${minutesToMilliseconds(duration)},${minutesToMilliseconds(interval)}`
+                );
+            }
+
+            if(editSettingsResponse) {
+                await api.post(`${bethereUrl}/settings` , {
+                    deviceId: selectedDevice
+                });
+                dispatch(updateDeviceSettings(selectedDevice));
+            }
+            setLoading(false);
+        } catch (err) {
+            setLoading(false);
             console.log(err);
         }
-    }
-
-    const handleEditRoutine = () => {
-        console.log(routinePayload);
     }
 
     const getDeviceSettings = () => {
@@ -98,52 +139,46 @@ export const Settings = () => {
         setLoading(true);
         try {
             const lastBackLightResponse = await api.post(`${bethereUrl}/commands/laststatus` , {
-                commandName: commands.BACKLIGHT.NAME
+                categoryName: COMMANDS.BACKLIGHT.NAME
             });
             const lastStatus = _.get(lastBackLightResponse, 'data.value');
 
-            if(lastStatus === commands.BACKLIGHT.ON) {
-                const offRes = await api.post(`${bethereUrl}/send`, {
-                    commandName: commands.BACKLIGHT.NAME,
-                    changedFrom: "App",
-                    value: commands.BACKLIGHT.OFF
-                });
-
+            if(lastStatus === COMMANDS.BACKLIGHT.ON) {
+                const offRes = await sendCommand('BACKLIGHT_OFF');
                 if(offRes) { 
                     setBacklightStatus(false);
                 }
             } else {
-                const onRes = await api.post(`${bethereUrl}/send`, {
-                    commandName: commands.BACKLIGHT.NAME,
-                    changedFrom: "App",
-                    value: commands.BACKLIGHT.ON
-                });
+                const onRes = await sendCommand('BACKLIGHT_ON');
 
                 if(onRes) {
                     setBacklightStatus(true);
                 }
             }
-
             setTimeout(() => {
                 setLoading(false);
             }, 3000);
         } catch(err) {
             console.log(err);
         }
-    }
+    };
 
     useEffect(() => {
-        handleShowRoutineOptions();
-        setDeviceSettings(getDeviceSettings());
+        const selectedDeviceSettings = getDeviceSettings();
+        setDeviceSettings(selectedDeviceSettings);
+        const routineSettings = _.get(selectedDeviceSettings, 'wateringRoutine');
+        const isRoutineEnabled = _.get(routineSettings, 'enabled');
+        setRoutinePayload({...routineSettings});
+        setShowWorkingRoutineOptions(isRoutineEnabled);
     }, [selectedDevice]);
 
     useEffect(() => {
         const fetchBacklight = async () => {
             const res = await api.post(`${bethereUrl}/commands/laststatus` , {
-                commandName: commands.BACKLIGHT.NAME
+                categoryName: COMMANDS.BACKLIGHT.NAME
             });
             const backlightStatusValue = _.get(res, 'data.value');
-            if(backlightStatusValue === commands.BACKLIGHT.ON) {
+            if(backlightStatusValue === COMMANDS.BACKLIGHT.ON) {
                 setBacklightStatus(true);
             } else {
                 setBacklightStatus(false);
@@ -247,17 +282,17 @@ export const Settings = () => {
                                                 ...routinePayload, 
                                                 startTime: selected.value
                                             })}
-                                            defaultValue={findTimeDefaultOption(startTime)}
+                                            defaultValue={findTimeDefaultOption(routinePayload.startTime)}
                                             menuPortalTarget={document.querySelector('body')}
                                             options={timeOptions} 
                                         />
-                                        <SubOptionLabel>End time:</SubOptionLabel>
+                                        <SubOptionLabel className="secondSubOption">End time:</SubOptionLabel>
                                         <Select
                                             onChange={(selected) => setRoutinePayload({
                                                 ...routinePayload,
                                                 endTime: selected.value
                                             })}
-                                            defaultValue={findTimeDefaultOption(endTime)}
+                                            defaultValue={findTimeDefaultOption(routinePayload.endTime)}
                                             menuPortalTarget={document.querySelector('body')}
                                             options={timeOptions} 
                                         />
@@ -269,19 +304,19 @@ export const Settings = () => {
                                                 ...routinePayload,
                                                 interval: e.target.value 
                                             })}
-                                            value={interval}
+                                            value={routinePayload.interval}
                                             placeholder={"minutes"} 
                                             type="number"
                                             min={0}
                                             max={40}
                                         />
-                                        <SubOptionLabel>Watering timer:</SubOptionLabel>
+                                        <SubOptionLabel className="secondSubOption">Watering timer:</SubOptionLabel>
                                         <Input 
                                             onChange={(e) => setRoutinePayload({
                                                 ...routinePayload,
                                                 duration: e.target.value 
                                             })}
-                                            value={duration}
+                                            value={routinePayload.duration}
                                             placeholder={"minutes"} 
                                             type="number"
                                             min={0}
@@ -289,7 +324,9 @@ export const Settings = () => {
                                         />
                                     </SubOption>
                                     <div style={{display: 'flex', width: '100%', justifyContent: 'flex-end  '}}>
-                                        <Button onClick={() => handleEditRoutine()}>Save changes</Button>
+                                        {loading 
+                                            ? <Pulse /> 
+                                            : <Button onClick={() => handleEditRoutine()}>Save changes</Button>}
                                     </div>
                                 </div>)}
                         </Collapsible>

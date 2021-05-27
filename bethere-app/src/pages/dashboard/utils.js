@@ -1,14 +1,19 @@
+// field 3: internal humidity
+// field 4: internal temperature
+// field 5: external humidity
+// field 6: external temperature
+// field 7: pump indicator
 
 export const setColorId = (fieldNumber) => {
     switch(fieldNumber) {
         case 3:
-            return  "hsl(96, 70%, 50%)";
+        return  "#266ed9";
         case 4:
-            return "hsl(216, 70%, 50%)";
+            return "#f47560";
         case 5: 
-            return "hsl(18, 70%, 50%)";
+            return "#99ccff";
         case 6:
-            return "hsl(293, 70%, 50%)"
+            return "#e8c1a0";
         default:
             return "hsl(96, 70%, 50%)"
     }

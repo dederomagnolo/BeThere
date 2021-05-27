@@ -12,14 +12,14 @@ const router = express.Router();
  */
 router.post('/verify' , async(req, res) => {
     const {deviceSerialKey} = req.body;
-    const device = await Device.find({deviceSerialKey});
+    const device = await Device.find({deviceSerialKey, available: true});
     if(device && device.length > 0) {
         return res.send("Device is available");
     }
     return res.status(400).send("This serial key is not available");
 });
 
-router.post('/new' , async(req, res) => {
+router.post('/new' , async (req, res) => {
     try {
         const { deviceSerialKey, email, deviceName } = req.body; 
         const productAvailable = await Device.find({deviceSerialKey, available: true});     
@@ -28,7 +28,6 @@ router.post('/new' , async(req, res) => {
         if(_.isEmpty(productAvailable)) {
             return res.status(400).send("Device already registered or invalid serial key");
         }
-
         const user = await User.findOne({email});
 
         if(productAvailable && productAvailable.length > 0 && user) {
@@ -70,7 +69,12 @@ router.post('/new' , async(req, res) => {
 
 // only for test
 router.post('/populate' , async(req, res) => {
-    const newSerialKey = generateProductKey();
+    const {serialKey} = req.body;
+    let newSerialKey;
+    if(!serialKey) {
+        newSerialKey = generateProductKey();
+    }
+    newSerialKey = serialKey;
     const device = await Device.findOne({deviceSerialKey: newSerialKey});
     
     if(device) {
@@ -108,7 +112,8 @@ router.get('/all' , async (req, res) => {
 
 router.post('/user-devices' , async(req, res) => {
     const { userId } = req.body;
-    const userDevices = await Device.find({userId});
+    const userDevices = await Device.find({userId}).populate("settings");
+    console.log(userDevices);
     return res.send(userDevices);
 });
 

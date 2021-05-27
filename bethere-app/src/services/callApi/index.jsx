@@ -16,6 +16,7 @@ async function callApi (
     },
   };
   const url = `${bethereUrl}${service}`;
+  console.log(url)
 
   try {
       const res = await fetch(url, parameters);

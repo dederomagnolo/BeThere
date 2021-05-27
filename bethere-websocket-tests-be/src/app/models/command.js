@@ -5,6 +5,10 @@ const CommandSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    categoryName: {
+        type: String,
+        required: true
+    },
     deviceId:{
         type: String,
         require: true
@@ -15,7 +19,6 @@ const CommandSchema = new mongoose.Schema({
     },
     value: {
         type: String,
-        required: true,
     },
     changedFrom: {
         type: String,

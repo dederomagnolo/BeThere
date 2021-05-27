@@ -30,13 +30,13 @@ export const Graph = ({chartData}) => {
                     legendOffset: -40,
                     legendPosition: 'middle'
                 }}
-                colors={{ scheme: 'nivo' }}
+                colors={d => d.color}
                 pointSize={2}
                 pointColor={{ theme: 'background' }}
                 pointBorderWidth={8}
                 pointBorderColor={{ from: 'serieColor' }}
                 pointLabel="y"
-                pointLabelYOffset={-10}
+                pointLabelYOffset={-10} 
                 useMesh={true}
                 legends={[
                     {

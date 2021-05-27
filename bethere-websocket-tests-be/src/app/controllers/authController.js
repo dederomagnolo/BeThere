@@ -58,7 +58,7 @@ router.post('/authenticate' , async (req, res) => {
             _id: userId,
             devices: userDevices,
         }, 
-        token: generateToken({id    : user.id}
+        token: generateToken({id: user.id}
     )});
 });
 
