@@ -1,17 +1,19 @@
 const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
-/* mongoose.connect("mongodb://localhost:27017/be-there" , {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  useCreateIndex: true
-});
- */
-const clusterUri = "mongodb+srv://debora:tininha123@bethere-bd.ppxvl.mongodb.net/<dbname>?retryWrites=true&w=majority"
 
+console.log(process.env.HEROKU_ENV);
+
+// Database connection
 mongoose.connect(
-  clusterUri,
+  process.env.HEROKU_ENV === "production"
+    ? process.env.DB_CONNECTION_PROD
+    : process.env.DB_CONNECTION_DEV,
   { useUnifiedTopology: true, useNewUrlParser: true },
-  () => console.log("connected to db")
+  (err) => {
+    return err 
+      ? console.log(`cannot connect to db: ${err}`) 
+      : console.log("connected to db");
+  }
 );
 
 module.exports = mongoose;

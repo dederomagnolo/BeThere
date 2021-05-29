@@ -1,13 +1,15 @@
+const dotenv = require('dotenv');
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Server } = require('ws');
 const WebSocket = require('ws');
-const uuid = require('uuid');
 const moment = require('moment');
-const _ = require('lodash');
 const http = require('http');
 const cors = require('cors');
 const tz = require('moment-timezone');
+const _ = require('lodash');
+
+dotenv.config();
 
 const Command = require('./app/models/command');
 const Device = require('./app/models/device');
@@ -15,7 +17,7 @@ const Settings = require('./app/models/settings');
 const {minutesToMilliseconds, secondsToMilliseconds} = require('./utils');
 
 const app = express();
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(cors());
 
@@ -29,8 +31,7 @@ const server = http.createServer(app);
 
 const wss = new Server({ server });
 
-const lookup = {};
-let index = 0;
+const lookup = [];
 
 wss.on('connection' , async (ws, req) => {
     const receivedUrl = req.url;
@@ -47,14 +48,17 @@ wss.on('connection' , async (ws, req) => {
 
     ws.isAlive = true;
     ws.send('Server touched!');
+    ws.send(`time#${moment().tz('America/Sao_Paulo').format('HH:mm')}`);
     // change ws id to serial key if it exists
     if(paramsSplitted.length > 0) {
         ws.id = paramsSplitted[1];
+        lookup.push(ws.id);
+    } else {
+        ws.id = 'error to get device params';
     }
     // add device to list of connected devices
-    index++;
-    lookup[index] = paramsSplitted[1]; // serialKey from device
-
+    ; // serialKey from device
+    console.log(lookup);
     // send command
     // search serial key to send settings
     const device = await Device.findOne({deviceSerialKey: ws.id});
@@ -137,14 +141,24 @@ wss.on('connection' , async (ws, req) => {
 
         if(message === "WR_PUMP_ON") {
             await Command.create({
-                "categoryName": "Watering Routine",
+                "categoryName": "Watering Routine Pump",
                 "changedFrom": ws.id,
                 "commandName": "WR_PUMP_ON"
+            });
+        }
+
+        if(message === "WR_PUMP_OFF") {
+            await Command.create({
+                "categoryName": "Watering Routine Pump",
+                "changedFrom": ws.id,
+                "commandName": "WR_PUMP_OFF"
             });
         }
     });
 
     ws.on('close', () => {
+        const findInLookup = _.find(lookup, (clientSerialConnected) => clientSerialConnected === ws.id);
+        _.pull(lookup, findInLookup);
         console.log('Client disconnected');
         clearInterval(ws.timer);
         ws.terminate();
@@ -183,6 +197,12 @@ app.post('/send', async function (req, res) {
         }
     });
     res.send(command);
+});
+
+app.post('/ls-status', async function(req, res) {
+    const { deviceSerialKey } = req.body;
+    const isDeviceConnected = !!_.find(lookup, (client) => client === deviceSerialKey);
+    res.send({isDeviceConnected});
 });
 
 const port = 8080;
