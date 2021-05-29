@@ -7,7 +7,6 @@ import {ArrowIosDownwardOutline} from '@styled-icons/evaicons-outline/ArrowIosDo
 import {ArrowIosUpwardOutline} from '@styled-icons/evaicons-outline/ArrowIosUpwardOutline';
 import {Container} from 'react-grid-system';
 import Collapsible from 'react-collapsible';
-import {Pulse} from 'styled-spinkit';
 import '../../styles/styles.css';
 import api from '../../services';
 import {bethereUrl} from '../../services/configs';
@@ -21,14 +20,18 @@ import {
     SubOptionLabel, 
     Section, 
     Input, 
-    CollapsibleHeader
+    CollapsibleHeader,
+    EditLabel,
+    WateringParametersContainer
 } from './styles';
 import COMMANDS from '../../services/commands';
 import ResetOption from './reset';
 import { getUserDevices, getUserId } from '../../store/user/selectors';
 import {updateDeviceSettings} from '../../store/user/actions';
+import {setUserDevices} from '../../store/devices/actions';
 import sendCommand from '../../services/sendCommand';
 import {minutesToMilliseconds, secondsToMilliseconds} from '../../utils/functions';
+import SuccessButton from './successButton';
 
 export const Settings = () => {
     const userDevices = useSelector(getUserDevices);
@@ -37,6 +40,7 @@ export const Settings = () => {
     const [loading, setLoading] = useState(false);
     const [selectedDevice, setSelectedDevice] = useState(_.get(userDevices, '[0]._id'));
     const [deviceSettings, setDeviceSettings] = useState(null);
+    const [editSuccess, setEditSuccess] = useState(null);
     const wateringRoutineSettings = _.get(deviceSettings, 'wateringRoutine');
     const wateringRoutineEnabled = _.get(wateringRoutineSettings, 'enabled');
     const [showWorkingRoutineOptions, setShowWorkingRoutineOptions] = useState(wateringRoutineEnabled);
@@ -66,16 +70,7 @@ export const Settings = () => {
         return _.find(timeOptions, (option) => option.value === value);
     }
 
-    const handleShowRoutineOptions = async () => {
-        if(showWorkingRoutineOptions) {
-            await handleEditRoutine();
-            await sendCommand("WATERING_AUTO_OFF");
-        }
-        setShowWorkingRoutineOptions(!showWorkingRoutineOptions);
-        setRoutinePayload({...routinePayload, enabled: !showWorkingRoutineOptions});
-    }
-
-    const handleEditRoutine = async () => {
+    const handleEditRoutine = async (toggleOff = false, editFromButton = false) => {
         try {
             setLoading(true);
             const {
@@ -105,12 +100,11 @@ export const Settings = () => {
                     endTime: endTime,
                     interval: interval,
                     duration: duration,
-                    enabled: showWorkingRoutineOptions
+                    enabled: !toggleOff
                 }
             });
 
-            if(showWorkingRoutineOptions) {
-                await sendCommand('WATERING_AUTO_ON');
+            if(!toggleOff) {
                 await sendCommand(
                     'SETTINGS_ON', 
                     `${backlight},${minutesToMilliseconds(pumpTimer)},${secondsToMilliseconds(localMeasureInterval)},${minutesToMilliseconds(remoteMeasureInterval)},${startTime},${endTime},${minutesToMilliseconds(duration)},${minutesToMilliseconds(interval)}`
@@ -118,14 +112,42 @@ export const Settings = () => {
             }
 
             if(editSettingsResponse) {
-                await api.post(`${bethereUrl}/settings` , {
+                const res = await api.post(`${bethereUrl}/settings` , {
                     deviceId: selectedDevice
                 });
-                dispatch(updateDeviceSettings(selectedDevice));
+                const deviceUpdatedSettings = _.get(res, 'data.settingsFromDevice');
+                setDeviceSettings(deviceUpdatedSettings[0]);
+                dispatch(updateDeviceSettings({selectedDevice, deviceUpdatedSettings}));
+                if(editFromButton) {
+                    setTimeout(() => {
+                        setEditSuccess(true);
+                    }, 300);
+                    setTimeout(() => {
+                        setEditSuccess(false);
+                    }, 3000);
+                }
             }
             setLoading(false);
         } catch (err) {
             setLoading(false);
+            console.log(err);
+        }
+    }
+
+    const handleTurnOffWateringMode = async () => {
+        try {
+            await sendCommand("WATERING_AUTO_OFF");
+            await handleEditRoutine(true);
+        } catch (err) {
+            console.log(err);
+        }
+    }
+
+    const handleTurnOnWateringMode = async () => {
+        try{
+            await sendCommand("WATERING_AUTO_ON");
+            await handleEditRoutine();
+        } catch (err) {
             console.log(err);
         }
     }
@@ -167,12 +189,17 @@ export const Settings = () => {
         const selectedDeviceSettings = getDeviceSettings();
         setDeviceSettings(selectedDeviceSettings);
         const routineSettings = _.get(selectedDeviceSettings, 'wateringRoutine');
-        const isRoutineEnabled = _.get(routineSettings, 'enabled');
         setRoutinePayload({...routineSettings});
-        setShowWorkingRoutineOptions(isRoutineEnabled);
-    }, [selectedDevice]);
+    }, [selectedDevice,]);
 
     useEffect(() => {
+        const fetchUserDevices = async () => {
+            const res = await api.post(`${bethereUrl}/devices/user-devices`, {
+                userId
+            });
+            const userDevices = _.get(res, 'data');
+            dispatch(setUserDevices(userDevices));
+        }
         const fetchBacklight = async () => {
             const res = await api.post(`${bethereUrl}/commands/laststatus` , {
                 categoryName: COMMANDS.BACKLIGHT.NAME
@@ -184,21 +211,20 @@ export const Settings = () => {
                 setBacklightStatus(false);
             }
         }
-        /* 
-        const fetchDeviceSettings = async() => {
-            const res = await api.post(`${bethereUrl}/settings`, {
-                deviceId: selectedDevice
-            });
-
-            console.log(res);
-            if(res) {
-                setSelectedDeviceSettings(_.get(res, 'data.settingsFromDevice[0]'));
-            }
-            
-        } */
         fetchBacklight();
-        // fetchDeviceSettings();
+        fetchUserDevices();
     }, []);
+
+    const renderCollapsibleTitle = (title, whenOpen) => {
+        return (
+            <CollapsibleHeader>
+                <OptionLabel>
+                    {title}
+                </OptionLabel>
+                {whenOpen ? <ArrowIosUpwardOutline size={20}/> : <ArrowIosDownwardOutline size={20} />}
+            </CollapsibleHeader>
+        );
+    }
 
     return (
         <Container className="options" style={{height: '100%', minWidth: '80%'}}>
@@ -206,6 +232,11 @@ export const Settings = () => {
             <div>
                 <OptionLabel>Device</OptionLabel>
                 <Select
+                    styles={{container: (provided) => ({
+                        ...provided,
+                        marginTop: '15px',
+                        width: '100%'
+                    })}}
                     defaultValue={userDeviceOptions[0]}
                     onChange={(selected) => setSelectedDevice(selected.value)}
                     options={userDeviceOptions}
@@ -215,27 +246,14 @@ export const Settings = () => {
                 <Section>
                     <Option className="backLightOption">
                         <Collapsible 
-                            trigger={
-                                <CollapsibleHeader>
-                                    <OptionLabel>
-                                        LCD Backlight
-                                    </OptionLabel>
-                                    <ArrowIosDownwardOutline size={20} />
-                                </CollapsibleHeader>
-                            }
-                            triggerWhenOpen={
-                                <CollapsibleHeader>
-                                    <OptionLabel>
-                                        LCD Backlight
-                                    </OptionLabel>
-                                    <ArrowIosUpwardOutline size={20} />
-                                </CollapsibleHeader>
-                            }
+                            trigger={renderCollapsibleTitle('LCD Backlight')}
+                            triggerWhenOpen={renderCollapsibleTitle('LCD Backlight', true)}
                             transitionTime={150}
                         >
                             <Option className="selectBackLightTime">
                                 <SubOptionLabel>Turn on</SubOptionLabel>   
                                 <Toggle
+                                    backgroundColorChecked="#3bea64" 
                                     disabled={loading}
                                     checked={backlightStatus} 
                                     onChange={() => handleSendCommand()}
@@ -247,41 +265,36 @@ export const Settings = () => {
                 <Section>
                     <Option>    
                         <Collapsible
-                            trigger={
-                                <CollapsibleHeader>
-                                    <OptionLabel>
-                                        Watering
-                                    </OptionLabel>
-                                    <ArrowIosDownwardOutline size={20} />
-                                </CollapsibleHeader>
-                            }
-                            triggerWhenOpen={
-                                <CollapsibleHeader>
-                                    <OptionLabel>
-                                        Watering
-                                    </OptionLabel>
-                                    <ArrowIosUpwardOutline size={20} />
-                                </CollapsibleHeader>
-                            }
+                            trigger={renderCollapsibleTitle('Watering')}
+                            triggerWhenOpen={renderCollapsibleTitle('Watering', true)}
                             transitionTime={150}
                         >
                             <Option>
-                                <SubOptionLabel>Watering routine</SubOptionLabel>
-                                <Toggle                                
+                                <SubOptionLabel>Auto Watering</SubOptionLabel>
+                                <Toggle   
+                                    backgroundColorChecked="#3bea64"                              
                                     disabled={loading}
-                                    checked={showWorkingRoutineOptions} 
-                                    onChange={() => handleShowRoutineOptions()}
+                                    checked={wateringRoutineEnabled} 
+                                    onChange={() => {
+                                        wateringRoutineEnabled ? handleTurnOffWateringMode() : handleTurnOnWateringMode()
+                                    }}
                                 />
                             </Option>
+                            <EditLabel onClick={() => setShowWorkingRoutineOptions(!showWorkingRoutineOptions)}>
+                                Edit auto watering parameters
+                            </EditLabel>
                             {showWorkingRoutineOptions && (
-                                <div>
+                                <WateringParametersContainer>
                                     <SubOption>
                                         <SubOptionLabel>Start time:</SubOptionLabel>
                                         <Select
-                                            onChange={(selected) => setRoutinePayload({
-                                                ...routinePayload, 
-                                                startTime: selected.value
-                                            })}
+                                            onChange={(selected) => {
+
+                                                setRoutinePayload({
+                                                    ...routinePayload, 
+                                                    startTime: selected.value
+                                                });
+                                            }}
                                             defaultValue={findTimeDefaultOption(routinePayload.startTime)}
                                             menuPortalTarget={document.querySelector('body')}
                                             options={timeOptions} 
@@ -298,7 +311,7 @@ export const Settings = () => {
                                         />
                                     </SubOption>
                                     <SubOption>
-                                        <SubOptionLabel>Interval to turn on:</SubOptionLabel>
+                                        <SubOptionLabel>Interval to turn on (in mins):</SubOptionLabel>
                                         <Input
                                             onChange={(e) => setRoutinePayload({
                                                 ...routinePayload,
@@ -310,7 +323,7 @@ export const Settings = () => {
                                             min={0}
                                             max={40}
                                         />
-                                        <SubOptionLabel className="secondSubOption">Watering timer:</SubOptionLabel>
+                                        <SubOptionLabel className="secondSubOption">Watering timer (in mins):</SubOptionLabel>
                                         <Input 
                                             onChange={(e) => setRoutinePayload({
                                                 ...routinePayload,
@@ -323,17 +336,23 @@ export const Settings = () => {
                                             max={200}
                                         />
                                     </SubOption>
-                                    <div style={{display: 'flex', width: '100%', justifyContent: 'flex-end  '}}>
-                                        {loading 
-                                            ? <Pulse /> 
-                                            : <Button onClick={() => handleEditRoutine()}>Save changes</Button>}
+                                    <div style={{display: 'flex', width: '100%', justifyContent: 'flex-end'}}>
+                                        <SuccessButton success={editSuccess} callBack={setEditSuccess} onClick={() => handleEditRoutine(!wateringRoutineEnabled, true)}/>
                                     </div>
-                                </div>)}
+                                </WateringParametersContainer>)}
                         </Collapsible>
                     </Option>
                 </Section>
                 <Section>
-                    <ResetOption loading={loading} setLoading={setLoading} />
+                    <Option>
+                        <Collapsible 
+                            trigger={renderCollapsibleTitle('Reset Local Station')}
+                            triggerWhenOpen={renderCollapsibleTitle('Reset Local Station', true)}
+                            transitionTime={150}
+                        >
+                            <ResetOption loading={loading} setLoading={setLoading} />
+                        </Collapsible>
+                    </Option>
                 </Section>
             </Options> : 'loading'}
         </Container>        

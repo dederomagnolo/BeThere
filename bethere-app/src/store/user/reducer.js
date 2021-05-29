@@ -28,10 +28,16 @@ export const UserReducer = (
             }
         }
         case "UPDATE_DEVICE_SETTINGS": {
-            const deviceToUpdate = _.findIndex(state.devices, (device) => device._id === action.payload);
-            console.log(deviceToUpdate);
+            const selectedDevice = _.get(action.payload, 'selectedDevice');
+            console.log(state.devices);
+            const deviceToUpdate = _.findIndex(state.devices, (device) => device._id === selectedDevice);
             return {
-                ...state
+                ...state,
+                devices: _.map(state.devices, (device) => 
+                    device._id === selectedDevice 
+                    ? {...device, settings: action.payload.deviceUpdatedSettings}
+                    : {...device}
+                ) 
             }
         }
         case "persist/REHYDRATE": {

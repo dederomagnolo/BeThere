@@ -4,7 +4,6 @@ import { Redirect } from "react-router-dom";
 
 const PageContainer = (WrappedComponent) => {
     const auth = useSelector((state) => state.user.token);
-    console.log(WrappedComponent);
     
     const Component = () => {
       return auth ? <WrappedComponent /> : <Redirect to={"/login"} />;

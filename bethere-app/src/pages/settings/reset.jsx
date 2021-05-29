@@ -10,10 +10,10 @@ const ResetOption = ({loading, setLoading}) => {
     const handleReset = async() => {
         setLoading(true);
         setReseting(true);
-        const res = await api.post(`${bethereUrl}/send`, {
-            commandName: commands.RESET.NAME,
+        await api.post(`${bethereUrl}/send`, {
+            categoryName: commands.RESET.NAME,
             changedFrom: "App",
-            value: commands.RESET.COMMAND
+            commandName: commands.RESET.COMMAND
         });
 
         setTimeout(() => {
@@ -24,9 +24,6 @@ const ResetOption = ({loading, setLoading}) => {
 
     return (
         <Option className="resetOption">
-            <OptionLabel>
-                Reset Local Station
-            </OptionLabel>
             <p>
                 Your local station can take around 10 seconds to reboot the system and estabilish internet connection again.
             </p>

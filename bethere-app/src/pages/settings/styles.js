@@ -54,7 +54,52 @@ export const SubOptionLabel = styled.div`
     font-size: 14px;
     padding-right: 10px;
 `
+export const WateringParametersContainer = styled.div`
+    @keyframes fadeIn {
+        0% { opacity: 0; }
+        100% { opacity: 1; } 
+    }
 
+    animation: fadeIn 0.5s ease-in-out;
+`
+
+export const EditLabel = styled.span`
+    text-decoration: none;
+    display: inline-block;
+    margin: 20px auto;
+    position: relative;
+    overflow: hidden;
+    padding: 0 6px;
+    transition: color .3s cubic-bezier(0.11, 0.7, 0, 1);
+    
+    line-height: 1.3;
+
+  
+    &:hover{
+        cursor: pointer;
+        color: var(--tertiary);
+    }
+
+    &::after {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        display: inline-block;
+        width: 100%;
+        height: 2px;
+        background-color: var(--tertiary);
+        content: "";
+        transform: scale(0);
+        transition: transform 0.3s cubic-bezier(0.11, 0.7, 0, 1);
+    }
+  
+    &:hover {
+        &::after {
+            transform: scale(1);
+
+        }
+    }
+`
 export const Button = styled.button`
     cursor: pointer;
     
@@ -69,7 +114,7 @@ export const Button = styled.button`
     outline:none;
     transition: 0.1s;
     &:hover{
-    background-color: var(--tertiary);
+        background-color: var(--tertiary);
     }
 
     .loader {

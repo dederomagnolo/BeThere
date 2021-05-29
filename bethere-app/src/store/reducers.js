@@ -1,7 +1,8 @@
 import { combineReducers } from 'redux';
-import { UserReducer, UserState } from './user/reducer';
+import { UserReducer } from './user/reducer';
 import { GlobalReducer } from './global/reducer';
-import { GlobalState } from './global/interfaces';
+/* import { GlobalState } from './global/interfaces';*/
+import { DevicesReducer } from './devices/reducer';
 
 /* export interface AppState {
     user: UserState,
@@ -10,5 +11,6 @@ import { GlobalState } from './global/interfaces';
 
 export const RootReducers = combineReducers({
     user: UserReducer,
-    global: GlobalReducer
-})
+    global: GlobalReducer,
+    devices: DevicesReducer
+});

@@ -1,4 +1,4 @@
-import { GlobalState } from './interfaces'; 
+import * as _ from 'lodash';
 
 const INITIAL_STATE = {
     loading: false,
@@ -44,6 +44,13 @@ export const GlobalReducer = (
                     showNotification: false,
                     message: ""
                 }
+            }
+        }
+        case "persist/REHYDRATE": {
+
+            return {
+                ...state,
+                ..._.get(action.payload, 'global')
             }
         }
         case "CLEAR_GLOBAL_STATE": {

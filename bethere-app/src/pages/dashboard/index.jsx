@@ -44,17 +44,13 @@ export const Dashboard = () => {
     const [humidityData, setHumidityData] = useState([]);
     const [showTemperatureChart, setShowTemperatureChart] = useState(true);
     const [showHumidityChart, setShowHumidityChart] = useState(false);
+    const [localStationStatus, setLocalStationStatus] = useState(false);
     const { formatDate, parseDate } = MomentLocaleUtils;
     const dispatch = useDispatch();
+    const deviceSerialKey = _.get(_.get(userDevices, '[0]'), 'deviceSerialKey');
     const wateringRoutineSettings = _.get(userDevices, '[0].settings[0].wateringRoutine');
     const wateringEnabled = _.get(wateringRoutineSettings, 'enabled');
-    const autoWateringDuration = _.get(wateringRoutineSettings, 'duration');
-
-    // field 3: internal humidity
-    // field 4: internal temperature
-    // field 5: external humidity
-    // field 6: external temperature
-    // field 7: pump indicator
+    const autoWateringDuration = _.get(wateringRoutineSettings, 'duration'); // in minutes always
 
     const handleDateChange = (date) => {
         const momentDate = moment(date);
@@ -83,63 +79,60 @@ export const Dashboard = () => {
         return { mins, secs };
     }
 
-    const updatePumpFromRemote = async () => {
-        try{
-            let remainingTime;
-            const lastStatusAll = await api.post(`${bethereUrl}/commands/laststatus/all`);
-            const lastAutoPumpStatus = _.get(lastStatusAll, 'data.autoPump.commandName');
-            const lastPumpStatus = _.get(lastStatusAll, 'data.manualPump.commandName');
-
-            if(lastAutoPumpStatus === COMMANDS.WATERING_ROUTINE_PUMP.ON){
-                setAutoPumpFlag(true);
-                setPumpFlag(true);
-                remainingTime = calculateRemainingTime(lastAutoPumpStatus); 
-            }
-
-            if(lastPumpStatus === COMMANDS.MANUAL_PUMP.ON) {
-                setPumpFlag(true);
-                remainingTime = calculateRemainingTime(lastPumpStatus); 
-            } 
-
-            if(remainingTime.mins < 0 || remainingTime.secs < 0) {
-                setAutoPumpFlag(false);
-                setPumpFlag(false);
-            } else {
-                setTimeLeft(`${remainingTime.mins}:${remainingTime.secs}`);
-            }
-
-        } catch(err) {
-          console.log(err);
-        }
-    }
-
-    const updateFeedFromRemote = async () => {
-        try {
-            setTemperatureData([]);
-            setHumidityData([]);
-            const lastFeed = await api.get(`${thingspeakUrl}/feeds/last.json`);
-            const internalHumidity = _.get(lastFeed, 'data.field3');
-            const internalTemperature = _.get(lastFeed, 'data.field4');
-            const externalHumidity = _.get(lastFeed, 'data.field5');
-            const externalTemperature = _.get(lastFeed, 'data.field6');
-
-            const  measuresFromRemote  = {
-                internalHumidity: internalHumidity && internalHumidity !== 'nan' ? Number(internalHumidity).toFixed(2) : "-",
-                internalTemperature: internalTemperature && internalTemperature !== 'nan' ? Number(internalTemperature).toFixed(2) : "-",
-                externalHumidity: externalHumidity && externalHumidity !== 'nan' ? Number(externalHumidity).toFixed(2) : "-",
-                externalTemperature: externalTemperature && externalTemperature !== 'nan' ? Number(externalTemperature).toFixed(2) : "-"
-            }
-                       
-            setMeasures(measuresFromRemote);
-        } catch (err) {
-            console.log(err);
-        }
-    }
-
     useEffect(() => {
-        updatePumpFromRemote();
-        updateFeedFromRemote();
-
+        const updatePumpFromRemote = async () => {
+            try{
+                let remainingTime;
+                const lastStatusAll = await api.post(`${bethereUrl}/commands/laststatus/all`);
+                const lastAutoPumpStatus = _.get(lastStatusAll, 'data.autoPump.commandName');
+                const lastPumpStatus = _.get(lastStatusAll, 'data.manualPump.commandName');
+    
+                if(lastAutoPumpStatus === COMMANDS.WATERING_ROUTINE_PUMP.ON){
+                    setAutoPumpFlag(true);
+                    setPumpFlag(true);
+                    remainingTime = calculateRemainingTime(lastAutoPumpStatus); 
+                }
+    
+                if(lastPumpStatus === COMMANDS.MANUAL_PUMP.ON) {
+                    setPumpFlag(true);
+                    remainingTime = calculateRemainingTime(lastPumpStatus); 
+                } 
+    
+                if(remainingTime.mins < 0 || remainingTime.secs < 0) {
+                    setAutoPumpFlag(false);
+                    setPumpFlag(false);
+                } else {
+                    setTimeLeft(`${remainingTime.mins}:${remainingTime.secs}`);
+                }
+    
+            } catch(err) {
+              console.log(err);
+            }
+        }
+    
+        const updateFeedFromRemote = async () => {
+            try {
+                setTemperatureData([]);
+                setHumidityData([]);
+                const lastFeed = await api.get(`${thingspeakUrl}/feeds/last.json`);
+                const internalHumidity = _.get(lastFeed, 'data.field3');
+                const internalTemperature = _.get(lastFeed, 'data.field4');
+                const externalHumidity = _.get(lastFeed, 'data.field5');
+                const externalTemperature = _.get(lastFeed, 'data.field6');
+    
+                const  measuresFromRemote  = {
+                    internalHumidity: internalHumidity && internalHumidity !== 'nan' ? Number(internalHumidity).toFixed(2) : "-",
+                    internalTemperature: internalTemperature && internalTemperature !== 'nan' ? Number(internalTemperature).toFixed(2) : "-",
+                    externalHumidity: externalHumidity && externalHumidity !== 'nan' ? Number(externalHumidity).toFixed(2) : "-",
+                    externalTemperature: externalTemperature && externalTemperature !== 'nan' ? Number(externalTemperature).toFixed(2) : "-"
+                }
+                           
+                setMeasures(measuresFromRemote);
+            } catch (err) {
+                console.log(err);
+            }
+        }
+    
         const updateFields = async (fieldNumber) => {
             //const today = moment().format('YYYY-MM-DD');
             const nextDay = moment(selectedDate).add(1, 'days').format('YYYY-MM-DD');
@@ -183,6 +176,19 @@ export const Dashboard = () => {
             }
         }
 
+        const getLocalStationStatus = async () => {
+            try {
+                const localStationStatus = await api.post(`${bethereUrl}/ls-status`, {deviceSerialKey});
+                setLocalStationStatus(_.get(localStationStatus, 'data.isDeviceConnected'));
+            } catch (err) {
+                console.log(err);
+            }
+        }
+
+        getLocalStationStatus(); // I need to put this on redux store
+
+        updatePumpFromRemote();
+        updateFeedFromRemote();
         // field 3: internal humidity
         // field 4: internal temperature
         // field 5: external humidity
@@ -212,7 +218,7 @@ export const Dashboard = () => {
                     await sendCommand('WATERING_AUTO_OFF');
                 
                     // update settings in store
-                    const newSettings = await api.post(`${bethereUrl}/settings` , {
+                    await api.post(`${bethereUrl}/settings` , {
                         deviceId: selectedDevice
                     });
                     dispatch(updateDeviceSettings(selectedDevice));
@@ -248,6 +254,14 @@ export const Dashboard = () => {
             : <span style={{color: 'red'}}>OFF</span>;
     }
 
+    const renderStatusLabel = () => {
+        if (localStationStatus) {
+            return !pumpFlag ? <span style={{color: 'green'}}>Available</span> : <div>Remaining time: {timeLeft} mins</div> ;
+        } else {
+            return <span style={{color: 'red'}}>Local station is offline</span>;
+        }
+    }
+
     return (
         <MainContainer>
             <Header title="Dashboard" />
@@ -275,24 +289,23 @@ export const Dashboard = () => {
                         }}
                     />
                     <NewCard 
-                        label={"Pump Control"} 
+                        label={"Watering"} 
                         icon={"cog"}
                         pump={true}
                         children={
                             <div style={{display: 'flex', flexDirection: "column" , alignItems: 'center'}}>
                                 <div>
-                                    Auto watering: {renderAutoWateringLabel()}
+                                    Auto: {renderAutoWateringLabel()}
                                 </div>
-                                <Toggle 
-                                    backgroundColorChecked="#3bea64" 
-                                    disabled={blockButtonFlag} 
-                                    checked={pumpFlag || autoPumpFlag} 
-                                    onChange={() => updatePump()}
-                                />
-                                {!pumpFlag 
-                                    ? <div>{"Available!"}</div>
-                                    : <div>Remaining time: {timeLeft} mins</div> 
-                                }
+                                <div style={{padding: '3px 0 3px'}}>
+                                    <Toggle 
+                                        backgroundColorChecked="#3bea64" 
+                                        disabled={blockButtonFlag} 
+                                        checked={pumpFlag || autoPumpFlag} 
+                                        onChange={() => updatePump()}
+                                    />
+                                </div>
+                                {renderStatusLabel()}
                             </div>
                             }
                         >
