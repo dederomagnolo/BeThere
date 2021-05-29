@@ -260,11 +260,11 @@ void setup() {
       }
       settingsOn = false;
       // to check received settings
-            Serial.println("######################");
-            for (int i = 0; i < 8; i++)
-            {
-              Serial.println(settings[i]);
-            }
+      Serial.println("######################");
+      for (int i = 0; i < 8; i++)
+      {
+        Serial.println(settings[i]);
+      }
     }
 
     if (messageFromRemote.indexOf("time") != -1) {
@@ -394,13 +394,13 @@ void loop() {
     lcd.print("*");
     websocketReconnectionRetries++;
     bool connected = wsclient.connect(getServerUri());
+    Serial.println(websocketReconnectionRetries);
     if (connected) {
       websocketReconnectionRetries = 0;
       wsclient.send("BeThere is alive!");
       wsclient.send(String("$S") + serialKey);
       pongTimer = millis();
     }
-
     if (websocketReconnectionRetries > 8) {
       ESP.restart();
     }
@@ -438,8 +438,11 @@ void loop() {
   }
 
   if (wateringRoutineMode) {
+    Serial.println("Auto Watering Mode: ON");
     // check start time and end time for configured watering routine
+    Serial.println(hours);
     if (hours > settings[4] && hours < settings[5]) {
+      Serial.println("%%%%%%%%");
       if (millis() - beginWateringRoutineTimer > settings[7]) { // check if the interval has passed;
         Serial.print("Start auto watering");
         Serial.println("########################################");
