@@ -32,7 +32,7 @@ unsigned long maxPongInterval = 42000; // 40 secs
 // 0 - backlight [exact hour - 24h]
 // 1 - pumpTimer [ms] [default: 10min (600000)]
 // 2 - localMeasureInterval [ms] [default: 3s (3000ms)]
-// 3 - remoteMeasureInterval [ms] [default: 3min (180000ms)]
+// 3 - remoteMeasureInterval [ms] [default: 30min (1800000ms)]
 // 4 - wateringRoutineStartTime [exact hour - 24h]
 // 5 - wateringRoutineEndTimer [exact hour - 24h]
 // 6 - wateringRoutinePumpDuration [default: 5 min (900000)]
@@ -63,26 +63,26 @@ const char *ssidServer = "BeThere Access Point";
 const char *passwordServer = "welcome123";
 
 // Network credentials - Hardcoded connection
-char ssid[] = "Satan`s Connection";
-char password[] = "tininha157";
-// char ssid[] = "iPhone de Débora";
-// char password[] = "texas123";
-// char ssid[] = "Cogumelos Sao Carlos";
-// char password[] = "cogu2409";
+ char ssidDev[] = "Satan`s Connection";
+ char passwordDev[] = "tininha157";
+//char ssid[] = "iPhone de Débora";
+//char password[] = "texas123";
+char ssid[] = "Cogumelos Sao Carlos";
+char password[] = "cogu2409";
 
 // Device serial key - PROD
-// const char *serialKey = "35U2I-MAQOO-EXQX5-U43PI";
+const char *serialKey = "35U2I-MAQOO-EXQX5-U43PI";
 
-// Device serial key - TEST
-const char *serialKey = "A0CAA-DN6PV-6U2OD-NPY1Q";
+// Device serial key - DEV
+const char *serialKeyDev = "A0CAA-DN6PV-6U2OD-NPY1Q";
 
 // Thingspeak credentials - PROD
-//unsigned long myChannelNumber = 695672;
-//const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
+unsigned long myChannelNumber = 695672;
+const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
-// Thingspeak credentials - TEST
-unsigned long myChannelNumber = 700837;
-const char * myWriteAPIKey = "EZWNLFRNU5LW6XKU";
+// Thingspeak credentials - DEV
+ unsigned long myChannelNumberDev = 700837;
+ const char * myWriteAPIKeyDev = "EZWNLFRNU5LW6XKU";
 
 // websocket infos
 const char* websocketServerHost = "https://bethere-be.herokuapp.com/";
@@ -203,7 +203,11 @@ void setup() {
   } else {
     // begin wifi and try to connect
     withoutConfig = false;
-    WiFi.begin(ssid, password);
+    if(devMode) {
+      WiFi.begin(ssidDev, passwordDev);
+    } else {
+      WiFi.begin(ssid, password);
+    }
 
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);
@@ -219,7 +223,13 @@ void setup() {
   if (connected) {
     Serial.println("Connected with BeThere websocket server!");
     wsclient.send("BeThere is alive");
-    wsclient.send(String("$S") + serialKey);
+    if(devMode) {
+      wsclient.send(String("$S") + serialKeyDev);
+    } else {
+      wsclient.send(String("$S") + serialKey);
+    }
+    wsclient.send("WR_PUMP_OFF"); // to make sure automation is off in case of a reset
+    wsclient.send("MP0");  
   } else {
     Serial.println("Not Connected!");
   }
@@ -240,7 +250,6 @@ void setup() {
     String messageFromRemote = message.data();
     Serial.print("Message from server: ");
     Serial.println(message.data());
-
     // SETTINGS triggered. The default settings array will be overwriten
     // backlight, pumpTimer, localMeasureInterval, remoteMeasureInterval, monitoringMinLimit, monitoringMaxLimit
     if (settingsOn) {
@@ -296,17 +305,22 @@ void setup() {
     // WATERING ROUTINE
     if (messageFromRemote == "WR_ON") {
       wateringRoutineMode = true;
-      beginWateringRoutineTimer = millis();
+      if(beginWateringRoutineTimer == 0) {
+        wsclient.send("Auto Watering ON");
+        beginWateringRoutineTimer = millis();
+      }
     }
 
     if (messageFromRemote == "WR_OFF") {
       wateringRoutineMode = false;
+      wsclient.send("Auto Watering OFF");
       beginWateringRoutineTimer = 0;
     }
 
     if (messageFromRemote == "WR_PUMP_OFF") {
       digitalWrite(pumpInputRelay, HIGH);
       beginWateringRoutineTimer = millis();
+      beginPumpTimer = 0;
     }
 
     // CHANGE PUMP STATUS
@@ -314,6 +328,10 @@ void setup() {
       digitalWrite(pumpInputRelay, HIGH);
       beginPumpTimer = 0;
       manualPump = false;
+
+      if(wateringRoutineMode) {
+        beginWateringRoutineTimer = millis();  
+      }
     }
 
     if (messageFromRemote == "MP1") {
@@ -330,6 +348,7 @@ void setup() {
                    String("Pump:") + String(currentPumpStatus) + "" + String("Manual pump:") + String(manualPump);
     // Serial.println(statusString);
     wsclient.send(statusString);
+    wsclient.send("WR_TIMER:" + String(beginWateringRoutineTimer/1000));
 
     yield();
   });
@@ -398,7 +417,11 @@ void loop() {
     if (connected) {
       websocketReconnectionRetries = 0;
       wsclient.send("BeThere is alive!");
-      wsclient.send(String("$S") + serialKey);
+      if(devMode) {
+        wsclient.send(String("$S") + serialKeyDev);
+      } else {
+        wsclient.send(String("$S") + serialKey);
+      }
       pongTimer = millis();
     }
     if (websocketReconnectionRetries > 8) {
@@ -430,6 +453,7 @@ void loop() {
     if (millis() - beginPumpTimer > settings[6]) {
       digitalWrite(pumpInputRelay, HIGH);
       beginPumpTimer = 0;
+      beginWateringRoutineTimer = 0;
       wsclient.send("WR_PUMP_OFF");
       Serial.println("Auto Watering - Pump finished the work!");
     } else {
@@ -441,8 +465,10 @@ void loop() {
     Serial.println("Auto Watering Mode: ON");
     // check start time and end time for configured watering routine
     Serial.println(hours);
+    Serial.println(millis() - beginWateringRoutineTimer);
     if (hours > settings[4] && hours < settings[5]) {
       Serial.println("%%%%%%%%");
+      Serial.println(millis() - beginWateringRoutineTimer);
       if (millis() - beginWateringRoutineTimer > settings[7]) { // check if the interval has passed;
         Serial.print("Start auto watering");
         Serial.println("########################################");
@@ -537,7 +563,12 @@ void loop() {
     ThingSpeak.setField(7, testHumidity);
 
     // ThingSpeak - Write fields
-    int response = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+    int response;
+    if(devMode) {
+      response = ThingSpeak.writeFields(myChannelNumberDev, myWriteAPIKeyDev);
+    } else {
+      response = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+    }
     client.flush();
     // Check status response
     if (response == 200) {
@@ -555,7 +586,7 @@ void loop() {
 
 String getServerUri () {
   if (devMode) {
-    return String(websocketServerHostLocal) + ":" + String(websocketServerPort) + String("/?id=" + String(serialKey));
+    return String(websocketServerHostLocal) + ":" + String(websocketServerPort) + String("/?id=" + String(serialKeyDev));
   } else {
     return String(websocketServerHost) + String("?id=" + String(serialKey));
   }
@@ -611,7 +642,12 @@ void handleSubmit() {
 
 void initWifi() {
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
+  if(devMode) {
+    WiFi.begin(ssidDev, passwordDev);
+  } else {
+    WiFi.begin(ssid, password);
+  }
+  
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.println("...connecting!");
