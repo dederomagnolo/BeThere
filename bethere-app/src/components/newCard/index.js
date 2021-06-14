@@ -1,4 +1,6 @@
 import React from 'react';
+import {useTranslate} from 'react-translate';
+import { Icon } from 'semantic-ui-react';
 import { 
     CardContainer, 
     InnerCard, 
@@ -8,10 +10,17 @@ import {
     MeasureContainer,
     MeasureLabel
 } from './styles';
-import { Icon } from 'semantic-ui-react';
 
-export const NewCard = ({label, icon, internalMeasure, externalMeasure, pump, children, onClick}) => {
-
+export const NewCard = ({
+    label, 
+    icon, 
+    internalMeasure, 
+    externalMeasure,
+    pump, 
+    children, 
+    onClick
+}) => {
+    const translate = useTranslate('home');
     return(
         <CardContainer onClick={() => onClick && onClick()}>
             <InnerCard>
@@ -23,13 +32,13 @@ export const NewCard = ({label, icon, internalMeasure, externalMeasure, pump, ch
                     {!pump ? 
                         <>
                             <CardColumn>
-                                <MeasureLabel>Internal</MeasureLabel>
+                                <MeasureLabel>{translate('internalLabel')}</MeasureLabel>
                                 <MeasureContainer>
                                     <div>{internalMeasure}</div>
                                 </MeasureContainer>
                             </CardColumn>
                             <CardColumn>
-                                <MeasureLabel>External</MeasureLabel>
+                                <MeasureLabel>{translate('externalLabel')}</MeasureLabel>
                                 <MeasureContainer>
                                     <div>{externalMeasure}</div>
                                 </MeasureContainer>

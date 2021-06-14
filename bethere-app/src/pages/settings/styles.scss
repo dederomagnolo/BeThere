@@ -3,7 +3,7 @@ $fa-font-path: "~font-awesome/fonts";
 
 @mixin fontawesome {
   display: inline-block;
-  font: normal normal normal 14px/1 FontAwesome;
+  font: normal normal normal 10px/1 FontAwesome;
   font-size: inherit;
   text-rendering: auto;
   -webkit-font-smoothing: antialiased;
@@ -37,7 +37,7 @@ $fa-font-path: "~font-awesome/fonts";
 		transform: translate(-51%, -50%);
 	}
 }
-@mixin font-size($sizeValue: 1.2, $lineHeight: 1.4) {
+@mixin font-size($sizeValue: 0.8, $lineHeight: 1.4) {
   font-size: ($sizeValue * 10) + px;
   font-size: $sizeValue + rem;
   line-height: ($lineHeight * 10) + px;
@@ -59,7 +59,7 @@ $fa-font-path: "~font-awesome/fonts";
 	text-align:right;
 	
 	.btn{
-		@include font-size(1, 1);
+		@include font-size(0.9, 1);
 		transition:all .2s ease-in-out;
 		border-radius:8px;
         padding:18px 0px;

@@ -24,7 +24,7 @@ const Login = () => {
   const [hide, setHide] = useState(false);
   const dispatch = useDispatch();
   const history = useHistory();
-  const loading = useSelector(getGlobalLoading);
+  const [loading, setLoading] = useState(false);
   const token = useSelector(getToken);
  
   useEffect(() => {
@@ -46,7 +46,7 @@ const Login = () => {
       return alert("Username or password fields are empty");
     }
 
-    dispatch(setGlobalLoading(true));
+    setLoading(true);
     const payload = {
       username,
       password
@@ -63,11 +63,11 @@ const Login = () => {
       const userInfo = res.user;
       dispatch(setUserInfo(userInfo));
       dispatch(setToken(token));
-      dispatch(setGlobalLoading(false)); 
+      setLoading(false); 
       history.push('/');
     } else {
       alert("Usuário ou senha incorretos!");
-      dispatch(setGlobalLoading(false)); 
+      setLoading(false); 
     }
   }
 

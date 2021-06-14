@@ -1,15 +1,16 @@
 import React, {useState} from 'react';
-import { Container, Row } from 'react-grid-system';
-import { Header } from '../header';
-import { Card, Button } from 'semantic-ui-react';
-import { MenuCard } from '../card';
+import {Container} from 'react-grid-system';
+import {Card} from 'semantic-ui-react';
+
+import {Header} from '../header';
+import {MenuCard} from '../card';
 
 export const Charts = () => {
     const [moistureChart, setMoistureChart] = useState(false);
     const [temperatureChart, setTemperatureChart] = useState(false);
     const [umidityChart, setUmidityChart] = useState(false);
     const [luminosityChart, setLuminosityChart] = useState(false);
-
+    
     const displayMoistureChart = () => {
         setLuminosityChart(false);
         setUmidityChart(false);

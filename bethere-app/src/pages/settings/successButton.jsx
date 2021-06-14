@@ -1,17 +1,22 @@
-import React, {useState, useEffect} from 'react';
+import React from 'react';
 import './styles.scss';
 
 export const SuccessButton = (props) => {
-    const { success, onClick } = props;
+    const { 
+        success, 
+        onClick,
+        buttonLabel,
+        successLabel
+    } = props;
 
     return (
         <div className="e-button">
             <button className={success ? "btn success" : "btn"} onClick={() => onClick()}>
                 <span className="text">
-                    Save changes
+                    {buttonLabel}
                 </span>
                 <span className="success-text">
-                    Success!
+                    {successLabel}
                 </span>
             </button>
         </div>

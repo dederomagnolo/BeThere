@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import Toggle from 'react-styled-toggle';
 import * as _ from 'lodash';
 import Select from 'react-select';
+import {useTranslate} from 'react-translate';
 import {useSelector, useDispatch} from 'react-redux';
 import {ArrowIosDownwardOutline} from '@styled-icons/evaicons-outline/ArrowIosDownwardOutline';
 import {ArrowIosUpwardOutline} from '@styled-icons/evaicons-outline/ArrowIosUpwardOutline';
@@ -26,7 +27,7 @@ import {
 } from './styles';
 import COMMANDS from '../../services/commands';
 import ResetOption from './reset';
-import { getUserDevices, getUserId } from '../../store/user/selectors';
+import {getUserDevices, getUserId} from '../../store/user/selectors';
 import {updateDeviceSettings} from '../../store/user/actions';
 import {setUserDevices} from '../../store/devices/actions';
 import sendCommand from '../../services/sendCommand';
@@ -59,6 +60,7 @@ export const Settings = () => {
             label: device.deviceSerialKey
         }
     });
+    const translate = useTranslate('settings');
 
     for(let i = 0; i < 24 ; i++) {
         timeOptions.push({
@@ -172,7 +174,6 @@ export const Settings = () => {
                 }
             } else {
                 const onRes = await sendCommand('BACKLIGHT_ON');
-
                 if(onRes) {
                     setBacklightStatus(true);
                 }
@@ -228,10 +229,11 @@ export const Settings = () => {
 
     return (
         <Container className="options" style={{height: '100%', minWidth: '80%'}}>
-            <Header title="Settings"/>
+            <Header title={translate('title')} />
             <div>
-                <OptionLabel>Device</OptionLabel>
+                <OptionLabel>{translate('selectDeviceLabel')}</OptionLabel>
                 <Select
+                    isSearchable={false}
                     styles={{container: (provided) => ({
                         ...provided,
                         marginTop: '15px',
@@ -246,12 +248,12 @@ export const Settings = () => {
                 <Section>
                     <Option className="backLightOption">
                         <Collapsible 
-                            trigger={renderCollapsibleTitle('LCD Backlight')}
-                            triggerWhenOpen={renderCollapsibleTitle('LCD Backlight', true)}
+                            trigger={renderCollapsibleTitle(translate('lcdBacklightLabel'))}
+                            triggerWhenOpen={renderCollapsibleTitle(translate('lcdBacklightLabel'), true)}
                             transitionTime={150}
                         >
                             <Option className="selectBackLightTime">
-                                <SubOptionLabel>Turn on</SubOptionLabel>   
+                                <SubOptionLabel>{translate('lcdBacklightTurnOnLabel')}</SubOptionLabel>   
                                 <Toggle
                                     backgroundColorChecked="#3bea64" 
                                     disabled={loading}
@@ -265,29 +267,35 @@ export const Settings = () => {
                 <Section>
                     <Option>    
                         <Collapsible
-                            trigger={renderCollapsibleTitle('Watering')}
-                            triggerWhenOpen={renderCollapsibleTitle('Watering', true)}
+                            trigger={renderCollapsibleTitle(translate('wateringLabel'))}
+                            triggerWhenOpen={renderCollapsibleTitle(translate('wateringLabel'), true)}
                             transitionTime={150}
                         >
                             <Option>
-                                <SubOptionLabel>Auto Watering</SubOptionLabel>
+                                <SubOptionLabel>{translate('autoWateringLabel')}</SubOptionLabel>
                                 <Toggle   
                                     backgroundColorChecked="#3bea64"                              
                                     disabled={loading}
                                     checked={wateringRoutineEnabled} 
                                     onChange={() => {
-                                        wateringRoutineEnabled ? handleTurnOffWateringMode() : handleTurnOnWateringMode()
+                                        wateringRoutineEnabled 
+                                            ? handleTurnOffWateringMode() 
+                                            : handleTurnOnWateringMode()
                                     }}
                                 />
                             </Option>
                             <EditLabel onClick={() => setShowWorkingRoutineOptions(!showWorkingRoutineOptions)}>
-                                Edit auto watering parameters
+                                {translate('editAutoWateringParams')}
                             </EditLabel>
                             {showWorkingRoutineOptions && (
                                 <WateringParametersContainer>
                                     <SubOption>
-                                        <SubOptionLabel>Start time:</SubOptionLabel>
+                                        <SubOptionLabel>{translate('wateringStartTimeLabel')}:</SubOptionLabel>
                                         <Select
+                                            styles={{container: (provided) => ({
+                                                ...provided,
+                                                width: '130px'
+                                            })}}
                                             onChange={(selected) => {
 
                                                 setRoutinePayload({
@@ -299,8 +307,12 @@ export const Settings = () => {
                                             menuPortalTarget={document.querySelector('body')}
                                             options={timeOptions} 
                                         />
-                                        <SubOptionLabel className="secondSubOption">End time:</SubOptionLabel>
+                                        <SubOptionLabel className="secondSubOption">{translate('wateringEndTimeLabel')}:</SubOptionLabel>
                                         <Select
+                                            styles={{container: (provided) => ({
+                                                ...provided,
+                                                width: '130px'
+                                            })}}
                                             onChange={(selected) => setRoutinePayload({
                                                 ...routinePayload,
                                                 endTime: selected.value
@@ -311,7 +323,7 @@ export const Settings = () => {
                                         />
                                     </SubOption>
                                     <SubOption>
-                                        <SubOptionLabel>Interval to turn on (in mins):</SubOptionLabel>
+                                        <SubOptionLabel>{translate('wateringIntervalLabel')}:</SubOptionLabel>
                                         <Input
                                             onChange={(e) => setRoutinePayload({
                                                 ...routinePayload,
@@ -323,7 +335,9 @@ export const Settings = () => {
                                             min={0}
                                             max={40}
                                         />
-                                        <SubOptionLabel className="secondSubOption">Watering timer (in mins):</SubOptionLabel>
+                                    </SubOption>
+                                    <SubOption>
+                                        <SubOptionLabel>{translate('wateringTimerLabel')}:</SubOptionLabel>
                                         <Input 
                                             onChange={(e) => setRoutinePayload({
                                                 ...routinePayload,
@@ -337,7 +351,13 @@ export const Settings = () => {
                                         />
                                     </SubOption>
                                     <div style={{display: 'flex', width: '100%', justifyContent: 'flex-end'}}>
-                                        <SuccessButton success={editSuccess} callBack={setEditSuccess} onClick={() => handleEditRoutine(!wateringRoutineEnabled, true)}/>
+                                        <SuccessButton 
+                                            success={editSuccess} 
+                                            callBack={setEditSuccess} 
+                                            onClick={() => handleEditRoutine(!wateringRoutineEnabled, true)}
+                                            buttonLabel={translate('wateringSaveChangesButton')}
+                                            successLabel={translate('wateringSaveChangesSuccessLabel')}
+                                        />
                                     </div>
                                 </WateringParametersContainer>)}
                         </Collapsible>
@@ -346,8 +366,8 @@ export const Settings = () => {
                 <Section>
                     <Option>
                         <Collapsible 
-                            trigger={renderCollapsibleTitle('Reset Local Station')}
-                            triggerWhenOpen={renderCollapsibleTitle('Reset Local Station', true)}
+                            trigger={renderCollapsibleTitle(translate('resetLocalStationLabel'))}
+                            triggerWhenOpen={renderCollapsibleTitle(translate('resetLocalStationLabel'), true)}
                             transitionTime={150}
                         >
                             <ResetOption loading={loading} setLoading={setLoading} />

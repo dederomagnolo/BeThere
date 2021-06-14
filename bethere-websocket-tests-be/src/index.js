@@ -58,6 +58,7 @@ wss.on('connection' , async (ws, req) => {
     }
     // add device to list of connected devices
     ; // serialKey from device
+    console.log("alow");
     console.log(lookup);
     // send command
     // search serial key to send settings
@@ -96,6 +97,8 @@ wss.on('connection' , async (ws, req) => {
     }
 
     ws.on('message', async (message) => {
+
+        console.log(lookup);
         /* let deviceSerialKey = message.substr(0,2);
         if (deviceSerialKey === "$S") {
             deviceSerialKey = message.substr(2,deviceSerialKey.lenght);
@@ -154,10 +157,27 @@ wss.on('connection' , async (ws, req) => {
                 "commandName": "WR_PUMP_OFF"
             });
         }
+
+        if(message === "WR_OFF") {
+            await Command.create({
+                "categoryName": "Watering Routine Mode",
+                "changedFrom": ws.id,
+                "commandName": "WR_OFF"
+            });
+        }
+
+        if(message === "WR_ON") {
+            await Command.create({
+                "categoryName": "Watering Routine Mode",
+                "changedFrom": ws.id,
+                "commandName": "WR_ON"
+            });
+        }
     });
 
     ws.on('close', () => {
         const findInLookup = _.find(lookup, (clientSerialConnected) => clientSerialConnected === ws.id);
+        console.log(findInLookup);
         _.pull(lookup, findInLookup);
         console.log('Client disconnected');
         clearInterval(ws.timer);
@@ -194,14 +214,46 @@ app.post('/send', async function (req, res) {
             if(req.body.commandName === "SETTINGS") {
                 client.send(req.body.value);
             }
+            
+            // WA until next local station version (beginPumpTimer missing in the hardware):
+            if(req.body.commandName === "WR_PUMP_OFF") {
+                client.send("MP0");
+            }
+
+            if(req.body.commandName === "MP0") {
+                client.send("WR_PUMP_OFF");
+            }
+
         }
     });
     res.send(command);
 });
 
+
+
 app.post('/ls-status', async function(req, res) {
     const { deviceSerialKey } = req.body;
-    const isDeviceConnected = !!_.find(lookup, (client) => client === deviceSerialKey);
+    //console.log(req.body);
+    //console.log(lookup);
+    wss.clients.forEach((client) => { 
+        return client.id === deviceSerialKey;
+    });
+
+    const setFind = (set, cb) => {
+        for (const e of set) {
+          if (cb(e)) {
+            return e;
+          }
+        }
+        return undefined; 
+      }
+
+    const isDeviceConnected = !!setFind(wss.clients, e => e.id === deviceSerialKey);
+    console.log(isDeviceConnected);
+    /* const isDeviceConnected = !!_.find(lookup, (client) => {
+        console.log(client);
+        return 
+    }); */
     res.send({isDeviceConnected});
 });
 

@@ -4,16 +4,18 @@ import Toggle from 'react-styled-toggle';
 import {LeftArrow, RightArrow} from '@styled-icons/boxicons-regular';
 import * as _ from 'lodash';
 import moment from 'moment';
+import {Pulse} from 'styled-spinkit';
 import {useSelector, useDispatch} from 'react-redux';
+import {useTranslate} from 'react-translate';
 import DayPickerInput from 'react-day-picker/DayPickerInput';
 import MomentLocaleUtils from 'react-day-picker/moment';
 import api from '../../services';
+import {thingspeakUrl, bethereUrl} from '../../services/configs';
 import {Header} from '../../components/header';
 import {setColorId, isOdd, setMeasureId} from './utils';
 import {NewCard} from '../../components/newCard';
 import {Cards, MainContainer, DateContainer} from './styles';
 import {Graph} from './graph';
-import {thingspeakUrl, bethereUrl} from '../../services/configs';
 import {getUserId, getUserDevices} from '../../store/user/selectors';
 import {updateDeviceSettings} from '../../store/user/actions';
 import COMMANDS from '../../services/commands';
@@ -32,7 +34,6 @@ const pumpTimeSetPoint = 1200000;
 
 export const Dashboard = () => {
     const [pumpFlag, setPumpFlag] = useState(false);
-    const [autoPumpFlag, setAutoPumpFlag] = useState(false);
     const userDevices = useSelector(getUserDevices);
     const userId = useSelector(getUserId);
     const [selectedDevice, setSelectedDevice] = useState(_.get(userDevices, '[0]._id'));
@@ -46,11 +47,13 @@ export const Dashboard = () => {
     const [showHumidityChart, setShowHumidityChart] = useState(false);
     const [localStationStatus, setLocalStationStatus] = useState(false);
     const { formatDate, parseDate } = MomentLocaleUtils;
-    const dispatch = useDispatch();
     const deviceSerialKey = _.get(_.get(userDevices, '[0]'), 'deviceSerialKey');
     const wateringRoutineSettings = _.get(userDevices, '[0].settings[0].wateringRoutine');
     const wateringEnabled = _.get(wateringRoutineSettings, 'enabled');
     const autoWateringDuration = _.get(wateringRoutineSettings, 'duration'); // in minutes always
+    const [loading, setLoading] = useState(false);
+    const dispatch = useDispatch();
+    const translate = useTranslate("home");
 
     const handleDateChange = (date) => {
         const momentDate = moment(date);
@@ -81,14 +84,13 @@ export const Dashboard = () => {
 
     useEffect(() => {
         const updatePumpFromRemote = async () => {
-            try{
+            try {
                 let remainingTime;
                 const lastStatusAll = await api.post(`${bethereUrl}/commands/laststatus/all`);
                 const lastAutoPumpStatus = _.get(lastStatusAll, 'data.autoPump.commandName');
                 const lastPumpStatus = _.get(lastStatusAll, 'data.manualPump.commandName');
     
                 if(lastAutoPumpStatus === COMMANDS.WATERING_ROUTINE_PUMP.ON){
-                    setAutoPumpFlag(true);
                     setPumpFlag(true);
                     remainingTime = calculateRemainingTime(lastAutoPumpStatus); 
                 }
@@ -99,7 +101,6 @@ export const Dashboard = () => {
                 } 
     
                 if(remainingTime.mins < 0 || remainingTime.secs < 0) {
-                    setAutoPumpFlag(false);
                     setPumpFlag(false);
                 } else {
                     setTimeLeft(`${remainingTime.mins}:${remainingTime.secs}`);
@@ -178,9 +179,12 @@ export const Dashboard = () => {
 
         const getLocalStationStatus = async () => {
             try {
+                setLoading(true);
                 const localStationStatus = await api.post(`${bethereUrl}/ls-status`, {deviceSerialKey});
                 setLocalStationStatus(_.get(localStationStatus, 'data.isDeviceConnected'));
+                setLoading(false);
             } catch (err) {
+                setLoading(false);
                 console.log(err);
             }
         }
@@ -202,74 +206,69 @@ export const Dashboard = () => {
 
     }, [selectedDate]);
         
-    const updatePump = async () => { 
+    const updatePump = async () => {
         try {
-            if(autoPumpFlag) {
-                const pumpStatusReponse = await api.post(`${bethereUrl}/commands/laststatus` , {
-                    categoryName: COMMANDS.WATERING_ROUTINE_PUMP.NAME
-                });
-                setBlockButtonFlag(true);
-                const autoPumpStatusFromRemote = _.get(pumpStatusReponse, 'data.value');
-                if(autoPumpStatusFromRemote === COMMANDS.WATERING_ROUTINE_PUMP.ON) {
-                    await sendCommand('AUTO_PUMP_OFF')
-                    setAutoPumpFlag(false);
-                } else {
-                    // turn on manual - disable watering routine
-                    await sendCommand('WATERING_AUTO_OFF');
-                
-                    // update settings in store
-                    await api.post(`${bethereUrl}/settings` , {
-                        deviceId: selectedDevice
-                    });
-                    dispatch(updateDeviceSettings(selectedDevice));
-                    // send command to turn on - manual
-                    await sendCommand('MANUAL_PUMP_ON');
-                    setPumpFlag(true);
-                }
+        setBlockButtonFlag(true);
+        const lastStatusAll = await api.post(`${bethereUrl}/commands/laststatus/all`);
+
+        if(lastStatusAll) {
+            const lastAutoPumpStatus = _.get(lastStatusAll, 'data.autoPump.commandName');
+            const lastPumpStatus = _.get(lastStatusAll, 'data.manualPump.commandName');
+            console.log(lastAutoPumpStatus);
+            if(lastAutoPumpStatus === COMMANDS.WATERING_ROUTINE_PUMP.ON) {
+                await sendCommand('AUTO_PUMP_OFF');
                 setBlockButtonFlag(false);
-            } else {
-                const pumpStatusReponse = await api.post(`${bethereUrl}/commands/laststatus` , {
-                    categoryName: COMMANDS.MANUAL_PUMP.NAME
-                });
-                setBlockButtonFlag(true);
-                const pumpStatus = _.get(pumpStatusReponse, 'data.commandName');
-                console.log(pumpStatus);
-                if(pumpStatus === COMMANDS.MANUAL_PUMP.ON) {
-                    await sendCommand('MANUAL_PUMP_OFF')
-                    setPumpFlag(false);
-                } else {
-                    await sendCommand('MANUAL_PUMP_ON');
-                    setPumpFlag(true);
-                }
-                setBlockButtonFlag(false);
+                return setPumpFlag(false);
             }
+            
+            if(lastPumpStatus === COMMANDS.MANUAL_PUMP.ON) {
+                console.log("aqui");
+                await sendCommand('MANUAL_PUMP_OFF');
+                setBlockButtonFlag(false);
+                return setPumpFlag(false);
+            } 
+            
+            if(lastPumpStatus === COMMANDS.MANUAL_PUMP.OFF) {
+                await sendCommand('MANUAL_PUMP_ON');
+                setBlockButtonFlag(false);
+                return setPumpFlag(true);
+            }
+        }
+ 
         } catch(err) {
-          console.log(err);
-        }    
+            console.log(err);
+        }
     }
 
     const renderAutoWateringLabel = () => {
         return wateringEnabled 
-            ? <span style={{color: 'green'}}>ON</span> 
-            : <span style={{color: 'red'}}>OFF</span>;
+            ? <span style={{color: 'green'}}>{translate('onLabel')}</span> 
+            : <span style={{color: 'red'}}>{translate('offLabel')}</span>;
     }
 
     const renderStatusLabel = () => {
         if (localStationStatus) {
-            return !pumpFlag ? <span style={{color: 'green'}}>Available</span> : <div>Remaining time: {timeLeft} mins</div> ;
+            return (
+                !pumpFlag 
+                    ? <span style={{color: 'green'}}>{translate('localStationStatusOnLabel')}</span> 
+                    : <div>Remaining time: {timeLeft} mins</div> 
+            );
         } else {
-            return <span style={{color: 'red'}}>Local station is offline</span>;
+            return (
+                <span style={{color: 'red'}}>
+                    {translate('localStationStatusOffLabel')}
+                </span>);
         }
     }
 
     return (
         <MainContainer>
-            <Header title="Dashboard" />
+            <Header title={translate('title')} />
             <div>
                 {/* <span style={{fontSize: "20px"}}>Hello! Your garden looks good today:</span> */}
                 <Cards>
                     <NewCard 
-                        label={"Temperature (°C)"} 
+                        label={`${translate('temperatureLabel')} (°C)`} 
                         icon={"thermometer half"} 
                         internalMeasure={measures.internalTemperature} 
                         externalMeasure={measures.externalTemperature}
@@ -279,7 +278,7 @@ export const Dashboard = () => {
                         }}
                     />
                     <NewCard 
-                        label={"Humidity (%)"} 
+                        label={`${translate('humidityLabel')} (%)`} 
                         icon={"tint"} 
                         internalMeasure={measures.internalHumidity} 
                         externalMeasure={measures.externalHumidity} 
@@ -289,19 +288,19 @@ export const Dashboard = () => {
                         }}
                     />
                     <NewCard 
-                        label={"Watering"} 
+                        label={translate('wateringLabel')} 
                         icon={"cog"}
                         pump={true}
                         children={
-                            <div style={{display: 'flex', flexDirection: "column" , alignItems: 'center'}}>
+                           loading ? <Pulse size={20} /> : <div style={{display: 'flex', flexDirection: "column" , alignItems: 'center'}}>
                                 <div>
                                     Auto: {renderAutoWateringLabel()}
                                 </div>
                                 <div style={{padding: '3px 0 3px'}}>
                                     <Toggle 
                                         backgroundColorChecked="#3bea64" 
-                                        disabled={blockButtonFlag} 
-                                        checked={pumpFlag || autoPumpFlag} 
+                                        disabled={!localStationStatus || blockButtonFlag} 
+                                        checked={pumpFlag} 
                                         onChange={() => updatePump()}
                                     />
                                 </div>

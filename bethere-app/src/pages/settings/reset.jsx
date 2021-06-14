@@ -1,12 +1,15 @@
 import React, {useState} from 'react';
+import {ThreeBounce} from 'styled-spinkit';
+import {useTranslate} from 'react-translate';
 import api from '../../services'
 import {Option, OptionLabel, ResetButton} from './styles';
 import {bethereUrl} from '../../services/configs';
 import commands from '../../services/commands';
-import { ThreeBounce } from 'styled-spinkit';
 
 const ResetOption = ({loading, setLoading}) => {
     const [reseting, setReseting] = useState(false);
+    const translate = useTranslate('settings');
+
     const handleReset = async() => {
         setLoading(true);
         setReseting(true);
@@ -25,13 +28,13 @@ const ResetOption = ({loading, setLoading}) => {
     return (
         <Option className="resetOption">
             <p>
-                Your local station can take around 10 seconds to reboot the system and estabilish internet connection again.
+                {translate('resetContent1')}
             </p>
             <p>
-                Check your internet connection before rebooting.
+                {translate('resetContent2')}
             </p>
             <ResetButton disabled={loading} onClick={() => handleReset()}>  
-                {reseting ? <ThreeBounce color={'white'} className="loader"/> : "Reset"}
+                {reseting ? <ThreeBounce color={'white'} className="loader"/> : translate('resetButtonLabel')}
             </ResetButton>
         </Option>
     );

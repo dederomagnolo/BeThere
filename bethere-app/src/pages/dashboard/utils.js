@@ -22,13 +22,13 @@ export const setColorId = (fieldNumber) => {
 export const setMeasureId = (fieldNumber) => {
     switch(fieldNumber) {
         case 3:
-            return "Internal Humidity"
+            return "Umidade Interna"
         case 4:
-            return "Internal Temperature"
+            return "Temperatura Interna"
         case 5: 
-            return "External Humidity"
+            return "Umidade Externa"
         case 6:
-            return "External Temperature"
+            return "Temperatura Externa"
         default:
             return fieldNumber
     }

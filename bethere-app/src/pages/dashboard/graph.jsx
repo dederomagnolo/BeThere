@@ -3,6 +3,11 @@ import { ResponsiveLine } from '@nivo/line';
 import { GraphContainer } from './styles';
 
 export const Graph = ({chartData}) => {
+    
+    const renderChartLabel = () => {
+        return chartData.length > 0 && (chartData[0].id).includes('Temperatura') ? "°C" : "%";
+    }
+
     return (
         <GraphContainer>
             <ResponsiveLine
@@ -26,7 +31,7 @@ export const Graph = ({chartData}) => {
                     tickSize: 5,
                     tickPadding: 5,
                     tickRotation: 0,
-                    legend: 'measure',
+                    legend: renderChartLabel(),
                     legendOffset: -40,
                     legendPosition: 'middle'
                 }}
