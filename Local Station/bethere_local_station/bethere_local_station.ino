@@ -12,9 +12,9 @@
 #include <ESP8266WebServer.h>
 
 // #### PINS DEFINITION ####
-const int pinDHT = 12;
-const int pinDHT2 = 13;
-const int pinDHT3 = 14;
+const int pinDHT = 12; // D6
+const int pinDHT2 = 13; // D7
+const int pinDHT3 = 14; // D5
 const int typeDHT = DHT22;
 const int pumpInputRelay = 16;
 
@@ -34,10 +34,10 @@ unsigned long maxPongInterval = 42000; // 40 secs
 // 2 - localMeasureInterval [ms] [default: 3s (3000ms)]
 // 3 - remoteMeasureInterval [ms] [default: 30min (1800000ms)]
 // 4 - wateringRoutineStartTime [exact hour - 24h]
-// 5 - wateringRoutineEndTimer [exact hour - 24h]
+// 5 - wateringRoutineEndTime [exact hour - 24h]
 // 6 - wateringRoutinePumpDuration [default: 5 min (900000)]
 // 7 - wateringRoutineInterval [default: 30 min (900000)]
-unsigned long settings[8] = {22, 1200000, 3000, 1800000, 9, 18, 300000 , 1800000};
+long settings[8] = {22, 1200000, 3000, 1800000, 9, 18, 300000 , 1800000};
 float internalTemperature = 0;
 float internalHumidity = 0;
 // Flags
@@ -50,7 +50,7 @@ bool manualPump = false;
 // Configure code
 bool bypassWifi = false;
 bool enableAccessPoint = false;
-bool devMode = true;
+bool devMode = false;
 
 // DHT PINS
 DHT dht(pinDHT, typeDHT);
@@ -347,9 +347,6 @@ void setup() {
     statusString = String("Watering mode:") +  String(wateringRoutineMode) + "" +
                    String("Pump:") + String(currentPumpStatus) + "" + String("Manual pump:") + String(manualPump);
     // Serial.println(statusString);
-    wsclient.send(statusString);
-    wsclient.send("WR_TIMER:" + String(beginWateringRoutineTimer/1000));
-
     yield();
   });
   lcd.clear();
@@ -464,9 +461,10 @@ void loop() {
   if (wateringRoutineMode) {
     Serial.println("Auto Watering Mode: ON");
     // check start time and end time for configured watering routine
-    Serial.println(hours);
-    Serial.println(millis() - beginWateringRoutineTimer);
-    if (hours > settings[4] && hours < settings[5]) {
+    wsclient.send(String(millis() - beginWateringRoutineTimer));
+    Serial.println(settings[4]);
+    Serial.println(hours > settings[4] && hours < settings[5]);
+    if (hours >= settings[4] && hours <= settings[5]) {
       Serial.println("%%%%%%%%");
       Serial.println(millis() - beginWateringRoutineTimer);
       if (millis() - beginWateringRoutineTimer > settings[7]) { // check if the interval has passed;
@@ -481,6 +479,7 @@ void loop() {
   // Read humidity and temperature from DHT22 sensors
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
+  
   float humidity2 = dht2.readHumidity();
   float temperature2 = dht2.readTemperature();
   float externalHumidity = dht3.readHumidity();
