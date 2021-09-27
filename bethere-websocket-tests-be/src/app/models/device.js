@@ -3,7 +3,7 @@ const mongoose = require('../../database');
 const DeviceSchema = new mongoose.Schema({
     deviceSerialKey: {
         type: String,
-        required: true
+        required: false
     },
     createdAt: {
         type: Date,
@@ -25,6 +25,9 @@ const DeviceSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
+    defaultDevice: {
+        type: Boolean
+    }
 });
 
 const Device = mongoose.model('Device', DeviceSchema);

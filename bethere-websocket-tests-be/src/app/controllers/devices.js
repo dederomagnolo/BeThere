@@ -23,8 +23,7 @@ router.post('/new' , async (req, res) => {
     try {
         const { deviceSerialKey, email, deviceName } = req.body; 
         const productAvailable = await Device.find({deviceSerialKey, available: true});     
-        console.log(productAvailable[0].planType);   
-        console.log(_.isEmpty(productAvailable));
+
         if(_.isEmpty(productAvailable)) {
             return res.status(400).send("Device already registered or invalid serial key");
         }
@@ -73,8 +72,10 @@ router.post('/populate' , async(req, res) => {
     let newSerialKey;
     if(!serialKey) {
         newSerialKey = generateProductKey();
+    } else {
+        newSerialKey = serialKey;
     }
-    newSerialKey = serialKey;
+    
     const device = await Device.findOne({deviceSerialKey: newSerialKey});
     
     if(device) {
@@ -110,10 +111,34 @@ router.get('/all' , async (req, res) => {
     }
 });
 
+router.post('/select-default', async(req, res) => {
+    const { deviceId, userId, defaultDevice } = req.body;
+
+    const user = await User.findOne({userId});
+    const device = await Device.findOne({deviceId});
+
+    // check if user and device exists
+    if(!user) return res.send({message: "Usuário não encontrado", error: true});
+    if(!device) return res.send({message: "Dispositivo não encontrado", error: true});
+
+    // check if the device is assigned to this user
+    const userDevices = _.get(user, 'devices');
+    let isDeviceFromThisUser;
+    if(userDevices.length > 0) {
+        isDeviceFromThisUser = userDevices.indexOf(deviceId);
+    }
+
+    if(isDeviceFromThisUser === -1)
+        return res.send({true: true, message: "Operação não autorizada"});
+
+    await Device.findOneAndUpdate({deviceId}, { defaultDevice })
+    
+    return res.send({message: `${device.deviceSerialKey} agora é o dispositivo padrão`, error: false});
+});
+
 router.post('/user-devices' , async(req, res) => {
     const { userId } = req.body;
     const userDevices = await Device.find({userId}).populate("settings");
-    console.log(userDevices);
     return res.send(userDevices);
 });
 

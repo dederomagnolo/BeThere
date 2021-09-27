@@ -14,6 +14,7 @@ dotenv.config();
 const Command = require('./app/models/command');
 const Device = require('./app/models/device');
 const Settings = require('./app/models/settings');
+const User = require('./app/models/user');
 const {minutesToMilliseconds, secondsToMilliseconds} = require('./utils');
 
 const app = express();
@@ -30,7 +31,7 @@ require('./app/controllers/index')(app); //importa controllers
 const server = http.createServer(app);
 
 const wss = new Server({ server });
-
+let lastCommand;
 const lookup = [];
 
 wss.on('connection' , async (ws, req) => {
@@ -56,10 +57,7 @@ wss.on('connection' , async (ws, req) => {
     } else {
         ws.id = 'error to get device params';
     }
-    // add device to list of connected devices
-    ; // serialKey from device
-    console.log("alow");
-    console.log(lookup);
+
     // send command
     // search serial key to send settings
     const device = await Device.findOne({deviceSerialKey: ws.id});
@@ -67,6 +65,7 @@ wss.on('connection' , async (ws, req) => {
     if(device) {
         deviceSettings = await Settings.findOne({deviceId: device.id});
     }
+
     if(deviceSettings) {
         const {
             backlight, 
@@ -97,7 +96,7 @@ wss.on('connection' , async (ws, req) => {
     }
 
     ws.on('message', async (message) => {
-
+        const userIdFromDevice = _.get(device, 'userId');
         console.log(lookup);
         /* let deviceSerialKey = message.substr(0,2);
         if (deviceSerialKey === "$S") {
@@ -126,53 +125,80 @@ wss.on('connection' , async (ws, req) => {
         }
 
         console.log(`Received message from ${ws.id}=> ${message}`);
-        if(message === "MP0") {
-            await Command.create({
-                "categoryName": "Manual Pump",
-                "commandName": "MP0",
-                "changedFrom": ws.id,
-            });
-        }
+        // save last command to only update bd if the client sends a different feedback message
+        
+        if(lastCommand != message) {
+            if(message === "MP0") {
+                await Command.create({
+                    "categoryName": "Manual Pump",
+                    "commandName": "MP0",
+                    "changedFrom": ws.id,
+                    "userId": userIdFromDevice,
+                    "deviceId": ws.id
+                });
+            }
 
-        if(message === "LCD_OFF") {
-            await Command.create({
-                "categoryName": "Backlight",
-                "commandName": "LCD_OFF",
-                "changedFrom": ws.id
-            });
+            if(message === "MP1") {
+                await Command.create({
+                    "categoryName": "Manual Pump",
+                    "commandName": "MP1",
+                    "changedFrom": ws.id,
+                    "userId": userIdFromDevice,
+                    "deviceId": ws.id
+                });
+            }
+    
+            if(message === "LCD_OFF") {
+                await Command.create({
+                    "categoryName": "Backlight",
+                    "commandName": "LCD_OFF",
+                    "changedFrom": ws.id,
+                    "userId": userIdFromDevice,
+                    "deviceId": ws.id
+                });
+            }
+    
+            if(message === "WR_PUMP_ON") {
+                await Command.create({
+                    "categoryName": "Watering Routine Pump",
+                    "changedFrom": ws.id,
+                    "commandName": "WR_PUMP_ON",
+                    "userId": userIdFromDevice,
+                    "deviceId": ws.id
+                });
+            }
+    
+            if(message === "WR_PUMP_OFF") {
+                await Command.create({
+                    "categoryName": "Watering Routine Pump",
+                    "changedFrom": ws.id,
+                    "commandName": "WR_PUMP_OFF",
+                    "userId": userIdFromDevice,
+                    "deviceId": ws.id
+                });
+            }
+    
+            if(message === "WR_OFF") {
+                await Command.create({
+                    "categoryName": "Watering Routine Mode",
+                    "changedFrom": ws.id,
+                    "commandName": "WR_OFF",
+                    "userId": userIdFromDevice,
+                    "deviceId": ws.id
+                });
+            }
+    
+            if(message === "WR_ON") {
+                await Command.create({
+                    "categoryName": "Watering Routine Mode",
+                    "changedFrom": ws.id,
+                    "commandName": "WR_ON",
+                    "userId": userIdFromDevice,
+                    "deviceId": ws.id
+                });
+            }
         }
-
-        if(message === "WR_PUMP_ON") {
-            await Command.create({
-                "categoryName": "Watering Routine Pump",
-                "changedFrom": ws.id,
-                "commandName": "WR_PUMP_ON"
-            });
-        }
-
-        if(message === "WR_PUMP_OFF") {
-            await Command.create({
-                "categoryName": "Watering Routine Pump",
-                "changedFrom": ws.id,
-                "commandName": "WR_PUMP_OFF"
-            });
-        }
-
-        if(message === "WR_OFF") {
-            await Command.create({
-                "categoryName": "Watering Routine Mode",
-                "changedFrom": ws.id,
-                "commandName": "WR_OFF"
-            });
-        }
-
-        if(message === "WR_ON") {
-            await Command.create({
-                "categoryName": "Watering Routine Mode",
-                "changedFrom": ws.id,
-                "commandName": "WR_ON"
-            });
-        }
+        lastCommand = message;
     });
 
     ws.on('close', () => {
@@ -196,34 +222,51 @@ function pingpong(ws) {
 }
 
 app.post('/send', async function (req, res) {
+    const { userId, deviceId } = req.body;
+
+    const user = await User.findOne({_id: userId});
+    if(!user) 
+        return res.send({error: true, message: "Usuário não encontrado"});
+
+    // check if the deviceId requested to send command exists
+    const device = await Device.findOne({_id: deviceId});
+    if(!device) 
+        return res.send({error: true, message: "Dispositivo não encontrado"});
+
+
+    const userDevices = _.get(user, 'devices'); // array of ids assigned to that user
+    
+    // check if the device is under user's collection
+    let isDeviceFromThisUser;
+    if(userDevices.length > 0) {
+        isDeviceFromThisUser = userDevices.indexOf(deviceId);
+    }
+
+    if(isDeviceFromThisUser === -1)
+        return res.send({true: true, message: "Operação não autorizada"});
+
+    // serial key from the localize the device in this context on ws clients
+    const deviceSerialKey = _.get(device, 'deviceSerialKey');
     const command = await Command.create(req.body);
-    /* const userId = req.body.userId;
-    console.log(userId);
-    if(userId === '5fc8527005fe91002450390e') {
-        console.log("home");
-        const isBeThereHome = _.filter(wss.clients, (client) => {
-            const clientId = client.id;
-            console.log("filter");
-            console.log(client.id);
-        });
-        console.log(isBeThereHome);
-    } */
+
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(req.body.commandName);
-            if(req.body.commandName === "SETTINGS") {
-                client.send(req.body.value);
-            }
+            // send command only for the client requested
+            if(deviceSerialKey === client.id) {
+                client.send(req.body.commandName);
+                if(req.body.commandName === "SETTINGS") {
+                    client.send(req.body.value);
+                }
             
-            // WA until next local station version (beginPumpTimer missing in the hardware):
-            if(req.body.commandName === "WR_PUMP_OFF") {
-                client.send("MP0");
-            }
+                // WA until next local station version (beginPumpTimer missing in the hardware):
+                if(req.body.commandName === "WR_PUMP_OFF") {
+                    client.send("MP0");
+                }
 
-            if(req.body.commandName === "MP0") {
-                client.send("WR_PUMP_OFF");
+                if(req.body.commandName === "MP0") {
+                    client.send("WR_PUMP_OFF");
+                }
             }
-
         }
     });
     res.send(command);
@@ -233,8 +276,7 @@ app.post('/send', async function (req, res) {
 
 app.post('/ls-status', async function(req, res) {
     const { deviceSerialKey } = req.body;
-    //console.log(req.body);
-    //console.log(lookup);
+
     wss.clients.forEach((client) => { 
         return client.id === deviceSerialKey;
     });
@@ -249,11 +291,7 @@ app.post('/ls-status', async function(req, res) {
       }
 
     const isDeviceConnected = !!setFind(wss.clients, e => e.id === deviceSerialKey);
-    console.log(isDeviceConnected);
-    /* const isDeviceConnected = !!_.find(lookup, (client) => {
-        console.log(client);
-        return 
-    }); */
+
     res.send({isDeviceConnected});
 });
 

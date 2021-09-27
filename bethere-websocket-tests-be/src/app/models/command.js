@@ -11,11 +11,11 @@ const CommandSchema = new mongoose.Schema({
     },
     deviceId:{
         type: String,
-        require: true
+        required: true
     },
     userId: {
         type: String,
-        require: true
+        required: true
     },
     value: {
         type: String,

@@ -30,7 +30,6 @@ router.post('/new' , async(req, res) => {
         } = req.body; 
         const user = await User.find({_id: userId});
         const device = await Device.findOne({_id: deviceId});
-        console.log(device);
         // need to match device with user here, before to create the new setting
         if(user && device) {
             const newSettings = await Settings.create({ 
@@ -55,7 +54,6 @@ router.post('/new' , async(req, res) => {
 });
 
 router.post('/edit' , async(req, res) => {
-    console.log(req.body);
     try {
         const {
             settingsId,
