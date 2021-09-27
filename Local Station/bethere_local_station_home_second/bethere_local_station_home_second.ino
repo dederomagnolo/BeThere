@@ -13,10 +13,8 @@
 
 // #### PINS DEFINITION ####
 const int pinDHT = 12; // D6
-const int pinDHT2 = 13; // D7
-const int pinDHT3 = 14; // D5
 const int typeDHT = DHT22;
-const int pumpInputRelay = 16;
+const int pumpInputRelay = 16; // D0
 
 // #### GLOBAL VARIABLES ####
 // Timers
@@ -54,8 +52,6 @@ bool devMode = true;
 
 // DHT PINS
 DHT dht(pinDHT, typeDHT);
-DHT dht2(pinDHT2, typeDHT);
-DHT dht3(pinDHT3, typeDHT);
 
 // #### DEVICE_SETTINGS ####
 // WiFi Server - Setup variables
@@ -63,8 +59,8 @@ const char *ssidServer = "BeThere Access Point";
 const char *passwordServer = "welcome123";
 
 // Network credentials - Hardcoded connection
- char ssidDev[] = "Satan`s Connection";
- char passwordDev[] = "tininha157";
+char ssidDev[] = "Satan`s Connection";
+char passwordDev[] = "tininha157";
 //char ssid[] = "iPhone de Débora";
 //char password[] = "texas123";
 char ssid[] = "Cogumelos Sao Carlos";
@@ -74,19 +70,19 @@ char password[] = "cogu2409";
 const char *serialKey = "35U2I-MAQOO-EXQX5-U43PI";
 
 // Device serial key - DEV
-const char *serialKeyDev = "A0CAA-DN6PV-6U2OD-NPY1Q";
+const char *serialKeyDev = "OYJ7Z-BORE0-EWNWQ-FICQW";
 
 // Thingspeak credentials - PROD
 unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
 // Thingspeak credentials - DEV
- unsigned long myChannelNumberDev = 700837;
- const char * myWriteAPIKeyDev = "EZWNLFRNU5LW6XKU";
+unsigned long myChannelNumberDev = 700837;
+const char * myWriteAPIKeyDev = "EZWNLFRNU5LW6XKU";
 
 // websocket infos
 const char* websocketServerHost = "https://bethere-be.herokuapp.com/";
-const char* websocketServerHostLocal = "http://192.168.0.12";
+const char* websocketServerHostLocal = "http://192.168.0.26";
 const char* websocketServerPort = "8080";
 
 // #### OBJECT DECLARATIONS ####
@@ -172,8 +168,6 @@ void setup() {
 
   // begin DHT sensors
   dht.begin();
-  dht2.begin();
-  dht3.begin();
 
   // initialize LCD
   lcd.begin(16, 2);
@@ -479,18 +473,10 @@ void loop() {
   // Read humidity and temperature from DHT22 sensors
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
-  
-  float humidity2 = dht2.readHumidity();
-  float temperature2 = dht2.readTemperature();
-  float externalHumidity = dht3.readHumidity();
-  float externalTemperature = dht3.readTemperature();
+
   //test
   float testHumidity = humidity;
   float testTemperature = temperature;
-
-  // calculate the mean for internal sensor
-  internalTemperature = temperature2;
-  internalHumidity = humidity2;
 
   // Write the measures on LCD
   lcd.setCursor(0, 0);
@@ -515,28 +501,8 @@ void loop() {
   } else {
     lcd.print(internalTemperature, 1);
   }
-
+ 
   delay(200);
-
-  lcd.setCursor(7, 0);
-  lcd.print("H2:");
-  lcd.setCursor(10, 0);
-
-  if (isnan(externalHumidity)) {
-    lcd.print("--.-");
-  } else {
-    lcd.print(externalHumidity, 1);
-  }
-
-  lcd.setCursor(7 , 1);
-  lcd.print("T2:");
-  lcd.setCursor(10 , 1);
-
-  if (isnan(externalTemperature)) {
-    lcd.print("--.-");
-  } else {
-    lcd.print(externalTemperature , 1);
-  }
 
   //Just for debug - print in serial monitor
   //  Serial.println("H:" + String(humidity) + "T:" + String(temperature));
@@ -555,11 +521,8 @@ void loop() {
   if (millis() - beginSendMeasureTimer > settings[3]) {
     Serial.println("Sending data...");
     // ThingSpeak - Set fields
-    ThingSpeak.setField(3, internalHumidity);
-    ThingSpeak.setField(4, internalTemperature);
-    ThingSpeak.setField(5, externalHumidity);
-    ThingSpeak.setField(6, externalTemperature);
-    ThingSpeak.setField(7, testHumidity);
+    ThingSpeak.setField(1, humidity);
+    ThingSpeak.setField(2, temperature);
 
     // ThingSpeak - Write fields
     int response;

@@ -1,3 +1,5 @@
+#define ALEXA_COMMAND_NAME "IRRIGAÇÃO"
+
 #include <Adafruit_Sensor.h>
 #include <string.h>
 #include <DHT.h>
@@ -10,13 +12,14 @@
 #include <WiFiUdp.h>
 #include <ArduinoWebsockets.h>
 #include <ESP8266WebServer.h>
+#include "fauxmoESP.h"
 
-// #### PINS DEFINITION ####
+fauxmoESP fauxmo;
+
+// #### PINS ####
 const int pinDHT = 12; // D6
-const int pinDHT2 = 13; // D7
-const int pinDHT3 = 14; // D5
 const int typeDHT = DHT22;
-const int pumpInputRelay = 16;
+const int pumpInputRelay = 16; // D0
 
 // #### GLOBAL VARIABLES ####
 // Timers
@@ -28,7 +31,8 @@ unsigned long lcdTimer = 0;
 unsigned long pumpMaxInterval = 1200000; // 20 minutes
 unsigned long maxPongInterval = 42000; // 40 secs
 // unsigned long lcdTimerMaxInterval = 60000;
-// Settings Array
+// Settings Array - DOC
+// ##############################################################
 // 0 - backlight [exact hour - 24h]
 // 1 - pumpTimer [ms] [default: 10min (600000)]
 // 2 - localMeasureInterval [ms] [default: 3s (3000ms)]
@@ -37,7 +41,9 @@ unsigned long maxPongInterval = 42000; // 40 secs
 // 5 - wateringRoutineEndTime [exact hour - 24h]
 // 6 - wateringRoutinePumpDuration [default: 5 min (900000)]
 // 7 - wateringRoutineInterval [default: 30 min (900000)]
+// ##############################################################
 long settings[8] = {22, 1200000, 3000, 1800000, 9, 18, 300000 , 1800000};
+// DHT measures
 float internalTemperature = 0;
 float internalHumidity = 0;
 // Flags
@@ -47,6 +53,7 @@ bool withoutConfig; // flag to track auto ESP connection. without config means t
 bool settingsOn = false;
 bool wateringRoutineMode = false;
 bool manualPump = false;
+bool alexaCommand = false;
 // Configure code
 bool bypassWifi = false;
 bool enableAccessPoint = false;
@@ -54,8 +61,6 @@ bool devMode = true;
 
 // DHT PINS
 DHT dht(pinDHT, typeDHT);
-DHT dht2(pinDHT2, typeDHT);
-DHT dht3(pinDHT3, typeDHT);
 
 // #### DEVICE_SETTINGS ####
 // WiFi Server - Setup variables
@@ -63,8 +68,8 @@ const char *ssidServer = "BeThere Access Point";
 const char *passwordServer = "welcome123";
 
 // Network credentials - Hardcoded connection
- char ssidDev[] = "Satan`s Connection";
- char passwordDev[] = "tininha157";
+char ssidDev[] = "Satan`s Connection";
+char passwordDev[] = "tininha157";
 //char ssid[] = "iPhone de Débora";
 //char password[] = "texas123";
 char ssid[] = "Cogumelos Sao Carlos";
@@ -81,12 +86,12 @@ unsigned long myChannelNumber = 695672;
 const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
 // Thingspeak credentials - DEV
- unsigned long myChannelNumberDev = 700837;
- const char * myWriteAPIKeyDev = "EZWNLFRNU5LW6XKU";
+unsigned long myChannelNumberDev = 700837;
+const char * myWriteAPIKeyDev = "EZWNLFRNU5LW6XKU";
 
 // websocket infos
 const char* websocketServerHost = "https://bethere-be.herokuapp.com/";
-const char* websocketServerHostLocal = "http://192.168.0.12";
+const char* websocketServerHostLocal = "http://192.168.0.26";
 const char* websocketServerPort = "8080";
 
 // #### OBJECT DECLARATIONS ####
@@ -172,8 +177,6 @@ void setup() {
 
   // begin DHT sensors
   dht.begin();
-  dht2.begin();
-  dht3.begin();
 
   // initialize LCD
   lcd.begin(16, 2);
@@ -240,7 +243,33 @@ void setup() {
 
   ThingSpeak.begin(client);
   delay(500);
+  
+  // alexa fauxmo - create server and add relay as device
+  fauxmo.createServer(true); 
+  fauxmo.setPort(80); 
+  fauxmo.enable(true);
+  fauxmo.addDevice(ALEXA_COMMAND_NAME);
 
+  fauxmo.onSetState([](unsigned char device_id, const char * device_name, bool state, unsigned char value) {
+    // Retorno de chamada quando um comando da Alexa é recebido.
+    // Você pode usar device_id ou device_name para escolher o elemento no qual realizar uma ação (relé, LED, ...)
+    // O state é um booleano (ON / OFF) e value um número de 0 a 255 (se você disser "definir a luz da cozinha para 50%", receberá 128 aqui).
+
+    Serial.printf("[MAIN] Device #%d (%s) state: %s value: %d\n", device_id, device_name, state ? "ON" : "OFF", value);
+    if ( (strcmp(device_name, ALEXA_COMMAND_NAME) == 0) ) {
+      alexaCommand = true;
+      if (state) {
+        digitalWrite(pumpInputRelay, LOW);
+        manualPump = true;
+        beginPumpTimer = millis();
+      } else {
+        digitalWrite(pumpInputRelay, HIGH);
+        manualPump = false;
+        beginPumpTimer = 0;
+      }
+    }
+  });
+  
   // websocket events
   wsclient.onEvent(onEventsCallback);
 
@@ -326,6 +355,7 @@ void setup() {
     // CHANGE PUMP STATUS
     if (messageFromRemote == "MP0") {
       digitalWrite(pumpInputRelay, HIGH);
+      wsclient.send("Manual pump OFF");
       beginPumpTimer = 0;
       manualPump = false;
 
@@ -336,6 +366,7 @@ void setup() {
 
     if (messageFromRemote == "MP1") {
       digitalWrite(pumpInputRelay, LOW);
+      wsclient.send("Manual pump ON");
       beginPumpTimer = millis();
       manualPump = true;
     }
@@ -353,6 +384,16 @@ void setup() {
 }
 
 void loop() {
+  fauxmo.handle();
+  if(alexaCommand){
+    alexaCommand = false;
+    if(manualPump) {
+      wsclient.send("MP1");
+    } else {
+      wsclient.send("MP0");
+    }
+  }
+  
   if (enableAccessPoint) {
     server.handleClient();
   }
@@ -479,18 +520,10 @@ void loop() {
   // Read humidity and temperature from DHT22 sensors
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
-  
-  float humidity2 = dht2.readHumidity();
-  float temperature2 = dht2.readTemperature();
-  float externalHumidity = dht3.readHumidity();
-  float externalTemperature = dht3.readTemperature();
+
   //test
   float testHumidity = humidity;
   float testTemperature = temperature;
-
-  // calculate the mean for internal sensor
-  internalTemperature = temperature2;
-  internalHumidity = humidity2;
 
   // Write the measures on LCD
   lcd.setCursor(0, 0);
@@ -515,28 +548,8 @@ void loop() {
   } else {
     lcd.print(internalTemperature, 1);
   }
-
+ 
   delay(200);
-
-  lcd.setCursor(7, 0);
-  lcd.print("H2:");
-  lcd.setCursor(10, 0);
-
-  if (isnan(externalHumidity)) {
-    lcd.print("--.-");
-  } else {
-    lcd.print(externalHumidity, 1);
-  }
-
-  lcd.setCursor(7 , 1);
-  lcd.print("T2:");
-  lcd.setCursor(10 , 1);
-
-  if (isnan(externalTemperature)) {
-    lcd.print("--.-");
-  } else {
-    lcd.print(externalTemperature , 1);
-  }
 
   //Just for debug - print in serial monitor
   //  Serial.println("H:" + String(humidity) + "T:" + String(temperature));
@@ -555,11 +568,8 @@ void loop() {
   if (millis() - beginSendMeasureTimer > settings[3]) {
     Serial.println("Sending data...");
     // ThingSpeak - Set fields
-    ThingSpeak.setField(3, internalHumidity);
-    ThingSpeak.setField(4, internalTemperature);
-    ThingSpeak.setField(5, externalHumidity);
-    ThingSpeak.setField(6, externalTemperature);
-    ThingSpeak.setField(7, testHumidity);
+    ThingSpeak.setField(1, humidity);
+    ThingSpeak.setField(2, temperature);
 
     // ThingSpeak - Write fields
     int response;
