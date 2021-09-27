@@ -35,6 +35,10 @@ export const Option = styled.div`
     .Collapsible {
         width: 100%;
     }
+
+    .manualTimerInput {
+        margin-right: 5px;
+    }
 `
 
 export const SubOption = styled(Option)`
@@ -46,6 +50,23 @@ export const SubOption = styled(Option)`
     }
 `
 
+export const SubOptionContainer = styled(Option)`
+    padding: 12px 0 12px 12px;
+    border-bottom: solid 1px #DFDFDF;
+    width: 90%;
+    justify-content: space-between;
+
+    &:last-child {
+        border: none;
+    }
+`
+
+export const Disclaimer = styled.p`
+    padding-top: 5px;
+    color: #919191;
+    font-size: 14px;
+`
+
 export const OptionLabel = styled.div`
     font-size: 20px; 
     padding-right: 10px;
@@ -55,25 +76,28 @@ export const SubOptionLabel = styled.div`
     padding-right: 10px;
 `
 export const WateringParametersContainer = styled.div`
+    padding-left: 10px;
+    padding-bottom: 12px;
+    width: 90%;
+    border-bottom: solid 1px #DFDFDF;
     @keyframes fadeIn {
         0% { opacity: 0; }
         100% { opacity: 1; } 
     }
-
+    &:last-child {
+        border: none;
+    }
     animation: fadeIn 0.5s ease-in-out;
 `
 
 export const EditLabel = styled.span`
     text-decoration: none;
     display: inline-block;
-    margin: 20px auto;
+    margin-left: 80px;
     position: relative;
     overflow: hidden;
-    padding: 0 6px;
+    font-size: 12px;
     transition: color .3s cubic-bezier(0.11, 0.7, 0, 1);
-    
-    line-height: 1.3;
-
   
     &:hover{
         cursor: pointer;
@@ -82,7 +106,7 @@ export const EditLabel = styled.span`
 
     &::after {
         position: absolute;
-        bottom: 0;
+        bottom: 6px;
         left: 0;
         display: inline-block;
         width: 100%;
@@ -96,7 +120,6 @@ export const EditLabel = styled.span`
     &:hover {
         &::after {
             transform: scale(1);
-
         }
     }
 `
@@ -138,5 +161,11 @@ export const Input = styled.input`
     border-style: solid;
     border-color:hsl(0,0%,80%);
     padding: 2px 8px 2px;
-    width: 130px;
+    width: 70px;
+`
+
+export const SuccessButtonContainer = styled.div`
+    display: flex;
+    width: 100%;
+    justify-content: flex-end;
 `

@@ -11,5 +11,5 @@ export const getUserId = (state) => {
 }
 
 export const getUserDevices = (state) => {
-  return state.user.devices;
+  return state.devices;
 }

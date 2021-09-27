@@ -42,13 +42,15 @@ const payloadList = {
     }
 }
 
-async function sendCommand (command, value) {
+async function sendCommand (command, userId, deviceId, value) {
     const payloadToSend = payloadList[command];
     return await callApi(
         'POST',
         '/send',
         {
             ...payloadToSend, 
+            userId,
+            deviceId,
             value,
             changedFrom: APP
         }

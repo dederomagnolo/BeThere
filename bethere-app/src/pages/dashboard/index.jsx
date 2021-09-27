@@ -36,7 +36,8 @@ export const Dashboard = () => {
     const [pumpFlag, setPumpFlag] = useState(false);
     const userDevices = useSelector(getUserDevices);
     const userId = useSelector(getUserId);
-    const [selectedDevice, setSelectedDevice] = useState(_.get(userDevices, '[0]._id'));
+    const [selectedDevice, setSelectedDevice] = useState(_.get(userDevices, '[0]'));
+    const deviceId = _.get(selectedDevice, '_id');
     const [blockButtonFlag, setBlockButtonFlag] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -214,22 +215,20 @@ export const Dashboard = () => {
         if(lastStatusAll) {
             const lastAutoPumpStatus = _.get(lastStatusAll, 'data.autoPump.commandName');
             const lastPumpStatus = _.get(lastStatusAll, 'data.manualPump.commandName');
-            console.log(lastAutoPumpStatus);
             if(lastAutoPumpStatus === COMMANDS.WATERING_ROUTINE_PUMP.ON) {
-                await sendCommand('AUTO_PUMP_OFF');
+                await sendCommand('AUTO_PUMP_OFF', userId, deviceId);
                 setBlockButtonFlag(false);
                 return setPumpFlag(false);
             }
             
             if(lastPumpStatus === COMMANDS.MANUAL_PUMP.ON) {
-                console.log("aqui");
-                await sendCommand('MANUAL_PUMP_OFF');
+                await sendCommand('MANUAL_PUMP_OFF', userId, deviceId);
                 setBlockButtonFlag(false);
                 return setPumpFlag(false);
             } 
             
             if(lastPumpStatus === COMMANDS.MANUAL_PUMP.OFF) {
-                await sendCommand('MANUAL_PUMP_ON');
+                await sendCommand('MANUAL_PUMP_ON', userId, deviceId);
                 setBlockButtonFlag(false);
                 return setPumpFlag(true);
             }

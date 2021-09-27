@@ -1,4 +1,4 @@
-const translations = {
+const portuguese = {
     locale: "pt",
     menu: {
       "home": "Resumo",
@@ -25,7 +25,7 @@ const translations = {
       "selectDeviceLabel": "Dispositivo",
       "wateringLabel": "Irrigação",
       "autoWateringLabel": "Automático",
-      "editAutoWateringParams": "Editar parâmetros",
+      "editWateringParams": "Editar",
       "resetLocalStationLabel": "Reiniciar estação local",
       "resetContent1": "A estação local pode demorar por volta de 10 segundos para reiniciar e estabilizar a conexão com a internet",
       "resetContent2": "Verifique a sua conexão com a internet antes de reiniciar!",
@@ -37,8 +37,12 @@ const translations = {
       "wateringSaveChangesButton": "Salvar alterações",
       "wateringSaveChangesSuccessLabel": "Sucesso!",
       "lcdBacklightLabel": "LCD",
-      "lcdBacklightTurnOnLabel": "Luz de fundo"
+      "lcdBacklightTurnOnLabel": "Luz de fundo",
+      "defaultDeviceDisclaimer": "O dispositivo selecionado é também o seu dispositivo padrão.",
+      "manualTimerLabel": "Manual - Timer"
     }
 };
 
-export {translations};
+export {
+  portuguese
+};

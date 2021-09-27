@@ -1,8 +1,7 @@
-import {translations} from './pt';
+import {portuguese} from './pt';
 
 const selectTranslate = () => {
-    console.log(translations);
-    return translations;
+    return portuguese;
 }
 
 export default selectTranslate;
