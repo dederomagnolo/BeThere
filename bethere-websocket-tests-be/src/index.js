@@ -8,6 +8,7 @@ const http = require('http');
 const cors = require('cors');
 const tz = require('moment-timezone');
 const _ = require('lodash');
+const COMMANDS = require('./utils/consts');
 
 dotenv.config();
 
@@ -130,7 +131,7 @@ wss.on('connection' , async (ws, req) => {
         if(lastCommand != message) {
             if(message === "MP0") {
                 await Command.create({
-                    "categoryName": "Manual Pump",
+                    "categoryName": COMMANDS.MANUAL_PUMP.NAME,
                     "commandName": "MP0",
                     "changedFrom": ws.id,
                     "userId": userIdFromDevice,
@@ -140,7 +141,7 @@ wss.on('connection' , async (ws, req) => {
 
             if(message === "MP1") {
                 await Command.create({
-                    "categoryName": "Manual Pump",
+                    "categoryName": COMMANDS.MANUAL_PUMP.NAME,
                     "commandName": "MP1",
                     "changedFrom": ws.id,
                     "userId": userIdFromDevice,
@@ -150,7 +151,7 @@ wss.on('connection' , async (ws, req) => {
     
             if(message === "LCD_OFF") {
                 await Command.create({
-                    "categoryName": "Backlight",
+                    "categoryName": COMMANDS.BACKLIGHT.NAME,
                     "commandName": "LCD_OFF",
                     "changedFrom": ws.id,
                     "userId": userIdFromDevice,
@@ -160,7 +161,7 @@ wss.on('connection' , async (ws, req) => {
     
             if(message === "WR_PUMP_ON") {
                 await Command.create({
-                    "categoryName": "Watering Routine Pump",
+                    "categoryName": COMMANDS.WATERING_ROUTINE_PUMP.NAME,
                     "changedFrom": ws.id,
                     "commandName": "WR_PUMP_ON",
                     "userId": userIdFromDevice,
@@ -170,7 +171,7 @@ wss.on('connection' , async (ws, req) => {
     
             if(message === "WR_PUMP_OFF") {
                 await Command.create({
-                    "categoryName": "Watering Routine Pump",
+                    "categoryName": COMMANDS.WATERING_ROUTINE_PUMP.NAME,
                     "changedFrom": ws.id,
                     "commandName": "WR_PUMP_OFF",
                     "userId": userIdFromDevice,
@@ -180,7 +181,7 @@ wss.on('connection' , async (ws, req) => {
     
             if(message === "WR_OFF") {
                 await Command.create({
-                    "categoryName": "Watering Routine Mode",
+                    "categoryName": COMMANDS.WATERING_ROUTINE_MODE.NAME,
                     "changedFrom": ws.id,
                     "commandName": "WR_OFF",
                     "userId": userIdFromDevice,
@@ -190,7 +191,7 @@ wss.on('connection' , async (ws, req) => {
     
             if(message === "WR_ON") {
                 await Command.create({
-                    "categoryName": "Watering Routine Mode",
+                    "categoryName": COMMANDS.WATERING_ROUTINE_MODE.NAME,
                     "changedFrom": ws.id,
                     "commandName": "WR_ON",
                     "userId": userIdFromDevice,

@@ -1,8 +1,9 @@
 const express = require('express');
 const authMiddleWare = require('../middlewares/auth');
-
+const moment = require('moment');
 const Command = require('../models/command');
 const router = express.Router();
+const tz = require('moment-timezone');
 
 /* router.use(authMiddleWare); */
 
@@ -22,5 +23,18 @@ router.post('/laststatus/all' , async(req, res) => {
         manualPump: manualPump[0]
     });
 });
+
+router.post('/history', async(req, res) => {
+    const { dayToRetrieveHistory } = req.body;
+    //const dateToQuery = new Date(dayToRetrieveHistory.toISOString());
+    const historyForDate = await Command.find({ 
+        createdAt: { 
+            $gte: dayToRetrieveHistory, 
+        }  
+    });
+    res.send({
+        historyForDate
+    });
+})
 
 module.exports = app => app.use('/commands', router);
