@@ -101,7 +101,7 @@ export const Dashboard = () => {
                     remainingTime = calculateRemainingTime(lastPumpStatus); 
                 } 
     
-                if(remainingTime.mins < 0 || remainingTime.secs < 0) {
+                if(remainingTime && (remainingTime.mins < 0 || remainingTime.secs < 0)) {
                     setPumpFlag(false);
                 } else {
                     setTimeLeft(`${remainingTime.mins}:${remainingTime.secs}`);

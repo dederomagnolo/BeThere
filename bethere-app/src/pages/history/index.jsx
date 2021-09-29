@@ -126,6 +126,9 @@ const History = () => {
         }
     }
 
+    const orderedCommandsList = _.orderBy(commandList, 'createdAt', 'desc');
+    console.log(orderedCommandsList)
+
     return (
         <Container style={{ height: "100%", minWidth: "80%" }}>
             <Header title="Histórico" />
@@ -164,13 +167,13 @@ const History = () => {
             </DateContainer>
 
             <CommandsList>
-                {_.map(commandList, (command) => {
+                {_.map(orderedCommandsList, (command) => {
                     const commandName = _.get(command, 'commandName');
                     const commandCategory = _.get(command, 'categoryName');
                     const createdAt = _.get(command, 'createdAt');
                     return (
                         <CommandCard>
-                            <div>{moment(createdAt).tz('America/Sao_Paulo').format("DD/MM/YYYY HH:mm")}</div>
+                            <div>{moment(createdAt).tz('America/Sao_Paulo').format("HH:mm")}</div>
                             <CommandLabels>
                                 <CommandCategory>{getCategoryLabel(commandCategory)}</CommandCategory>
                                 {getCommandLabel(commandName)}
