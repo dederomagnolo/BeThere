@@ -1,6 +1,6 @@
 import React from 'react';
 import {useTranslate} from 'react-translate';
-import {Home, ChartBar, Adjustments } from '@styled-icons/heroicons-outline';
+import {Home, ChartBar, Adjustments, BookOpen } from '@styled-icons/heroicons-outline';
 import { Container, Logo, MenuList, MenuItem } from './styles';
 import logo from '../../assets/bethere_logo.png';
 
@@ -12,6 +12,11 @@ const MenuBar = () => {
       Icon: () => <Home />,
       text: translate('home'),
       path: '/'
+    },
+    {
+      Icon: () => <BookOpen />,
+      text: translate('history'),
+      path: '/history'
     },
     /* {
       Icon: () => <ChartBar />,

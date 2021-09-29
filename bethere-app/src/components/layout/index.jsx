@@ -16,6 +16,7 @@ import MenuBar from '../menuBar';
 import Header from '../pageHeader';
 
 import {getToken} from '../../store/user/selectors';
+import History from '../../pages/history';
 
 const Layout = () => {
   const auth = useSelector(getToken)
@@ -30,6 +31,7 @@ const Layout = () => {
             <Route exact path="/" component={PageContainer(Dashboard)}/>
             <Route exact path="/charts" component={PageContainer(Charts)} />
             <Route exact path="/settings" component={PageContainer(Settings)}/>
+            <Route exact path="/history" component={History} />
             <Route exact path="/hello-there" component={Register}/>
           </Switch>
         </Wrapper>

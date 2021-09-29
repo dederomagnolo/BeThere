@@ -4,7 +4,7 @@ import {useTranslate} from 'react-translate';
 import api from '../../services'
 import {Option, OptionLabel, ResetButton} from './styles';
 import {bethereUrl} from '../../services/configs';
-import commands from '../../services/commands';
+import {COMMANDS} from '../../services/commands';
 
 const ResetOption = ({loading, setLoading}) => {
     const [reseting, setReseting] = useState(false);
@@ -14,9 +14,9 @@ const ResetOption = ({loading, setLoading}) => {
         setLoading(true);
         setReseting(true);
         await api.post(`${bethereUrl}/send`, {
-            categoryName: commands.RESET.NAME,
+            categoryName: COMMANDS.RESET.NAME,
             changedFrom: "App",
-            commandName: commands.RESET.COMMAND
+            commandName: COMMANDS.RESET.COMMAND
         });
 
         setTimeout(() => {

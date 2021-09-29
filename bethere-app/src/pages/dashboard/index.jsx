@@ -18,7 +18,7 @@ import {Cards, MainContainer, DateContainer} from './styles';
 import {Graph} from './graph';
 import {getUserId, getUserDevices} from '../../store/user/selectors';
 import {updateDeviceSettings} from '../../store/user/actions';
-import COMMANDS from '../../services/commands';
+import {COMMANDS} from '../../services/commands';
 import sendCommand from '../../services/sendCommand';
 
 const initialState = {

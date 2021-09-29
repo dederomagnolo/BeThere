@@ -29,4 +29,3 @@ export const MONTHS = [
   ];
   
   export const WEEKDAYS_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
-  
