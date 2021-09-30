@@ -17,7 +17,7 @@ import {NewCard} from '../../components/newCard';
 import {Cards, MainContainer, DateContainer} from './styles';
 import {Graph} from './graph';
 import {getUserId, getUserDevices} from '../../store/user/selectors';
-import {updateDeviceSettings} from '../../store/user/actions';
+import {setUserDevices} from '../../store/devices/actions';
 import {COMMANDS} from '../../services/commands';
 import sendCommand from '../../services/sendCommand';
 
@@ -33,11 +33,14 @@ const initialState = {
 const pumpTimeSetPoint = 1200000;
 
 export const Dashboard = () => {
-    const [pumpFlag, setPumpFlag] = useState(false);
+    const dispatch = useDispatch();
+    
     const userDevices = useSelector(getUserDevices);
     const userId = useSelector(getUserId);
     const [selectedDevice, setSelectedDevice] = useState(_.get(userDevices, '[0]'));
     const deviceId = _.get(selectedDevice, '_id');
+    console.log(deviceId);
+    const [pumpFlag, setPumpFlag] = useState(false);
     const [blockButtonFlag, setBlockButtonFlag] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -53,7 +56,6 @@ export const Dashboard = () => {
     const wateringEnabled = _.get(wateringRoutineSettings, 'enabled');
     const autoWateringDuration = _.get(wateringRoutineSettings, 'duration'); // in minutes always
     const [loading, setLoading] = useState(false);
-    const dispatch = useDispatch();
     const translate = useTranslate("home");
 
     const handleDateChange = (date) => {
@@ -82,6 +84,18 @@ export const Dashboard = () => {
         
         return { mins, secs };
     }
+
+    useEffect(() => {
+        const fetchUserDevices = async () => {
+            const res = await api.post(`${bethereUrl}/devices/user-devices`, {
+              userId,
+            });
+            const userDevices = _.get(res, "data");
+            dispatch(setUserDevices(userDevices));
+        };
+
+        fetchUserDevices();
+    }, []);
 
     useEffect(() => {
         const updatePumpFromRemote = async () => {

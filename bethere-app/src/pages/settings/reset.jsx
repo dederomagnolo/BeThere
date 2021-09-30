@@ -6,17 +6,18 @@ import {Option, OptionLabel, ResetButton} from './styles';
 import {bethereUrl} from '../../services/configs';
 import {COMMANDS} from '../../services/commands';
 
-const ResetOption = ({loading, setLoading}) => {
+const ResetOption = ({loading, setLoading, deviceId, userId}) => {
     const [reseting, setReseting] = useState(false);
     const translate = useTranslate('settings');
-
     const handleReset = async() => {
         setLoading(true);
         setReseting(true);
         await api.post(`${bethereUrl}/send`, {
             categoryName: COMMANDS.RESET.NAME,
             changedFrom: "App",
-            commandName: COMMANDS.RESET.COMMAND
+            commandName: COMMANDS.RESET.COMMAND,
+            userId,
+            deviceId
         });
 
         setTimeout(() => {

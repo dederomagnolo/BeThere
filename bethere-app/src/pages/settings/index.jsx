@@ -55,6 +55,8 @@ export const Settings = () => {
   const [selectedDevice, setSelectedDevice] = useState(
     _.get(userDevices, "[0]")
   );
+
+  const deviceId = _.get(selectedDevice, '_id');
 	const [deviceSettings, setDeviceSettings] = useState(_.get(userDevices, '[0].settings[0]'));
 
   const wateringRoutineSettings = _.get(deviceSettings, "wateringRoutine");
@@ -73,9 +75,7 @@ export const Settings = () => {
     duration: _.get(wateringRoutineSettings, "duration"),
   });
 	const [manualTimer, setManualTimer] = useState(manualTimerFromRemote);
-	
-	const deviceId = _.get(selectedDevice, "_id");
-	
+		
 	const timeOptions = [];
   for (let i = 0; i < 24; i++) {
     timeOptions.push({
@@ -507,7 +507,12 @@ export const Settings = () => {
                 )}
                 transitionTime={150}
               >
-                <ResetOption loading={loading} setLoading={setLoading} />
+                <ResetOption 
+                  loading={loading} 
+                  setLoading={setLoading} 
+                  userId={userId}
+                  deviceId={deviceId}
+                />
               </Collapsible>
             </Option>
           </Section>

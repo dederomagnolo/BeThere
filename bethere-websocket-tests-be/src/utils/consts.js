@@ -1,16 +1,16 @@
 const COMMANDS = {
     MANUAL_PUMP: {
-        NAME: 'Manual Remote Watering',
+        NAME: 'Manual Pump',
         ON: 'MP1',
         OFF: 'MP0'
     },
     WATERING_ROUTINE_MODE: {
-        NAME: 'Set Auto Watering Mode',
+        NAME: 'Watering Routine Mode',
         ON: 'WR_ON',
         OFF: 'WR_OFF',
     },
     WATERING_ROUTINE_PUMP: {
-        NAME: 'Auto Watering',
+        NAME: 'Watering Routine Pump',
         ON: 'WR_PUMP_ON',
         OFF: 'WR_PUMP_OFF'
     },

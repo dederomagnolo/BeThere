@@ -289,7 +289,7 @@ app.post('/ls-status', async function(req, res) {
           }
         }
         return undefined; 
-      }
+    }
 
     const isDeviceConnected = !!setFind(wss.clients, e => e.id === deviceSerialKey);
 

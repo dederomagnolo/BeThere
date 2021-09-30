@@ -26,8 +26,22 @@ router.post('/laststatus/all' , async(req, res) => {
 });
 
 router.post('/history', async(req, res) => {
+    // need to add device id and user id checks here. Returning everything just to test.
+
     const { dayToRetrieveHistory } = req.body;
     const historyForDate = await Command.find({ 
+        createdAt: { 
+            $gte: dayToRetrieveHistory, 
+        }  
+    });
+    res.send({
+        historyForDate
+    });
+})
+
+router.post('/delete', async(req, res) => {
+    const { dayToRetrieveHistory } = req.body;
+    const historyForDate = await Command.deleteMany({ 
         createdAt: { 
             $gte: dayToRetrieveHistory, 
         }  
