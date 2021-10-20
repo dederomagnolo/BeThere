@@ -12,6 +12,8 @@ Folder Structure:
 - All steps inside progress folder you can see the tutorial to reproduce in the project wordpress page:
 https://bethereinmygarden.wordpress.com/
 
+- Oficial site: https://bethereapp.com.br/
+
 - Always the final version with everything integrated will be at Local Station folder and bethere-app folder.
 
 - The first version of this project was presented as final course work at Federal University of Sao Carlos in 2019. You can find the complete work and its presentation on Docs folder.
