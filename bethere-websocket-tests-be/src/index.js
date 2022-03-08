@@ -33,11 +33,13 @@ const server = http.createServer(app);
 
 const wss = new Server({ server });
 let lastCommand;
+// every device connection will be saved by serial key in loopkup array
 const lookup = [];
 
 wss.on('connection' , async (ws, req) => {
+    // serial key will be sent by query param
     const receivedUrl = req.url;
-    let paramsSplitted;
+    let paramsSplitted = [];
     
     // check url params to get device serial key
     if(req.url) {
@@ -52,7 +54,7 @@ wss.on('connection' , async (ws, req) => {
     ws.send('Server touched!');
     ws.send(`time#${moment().tz('America/Sao_Paulo').format('HH:mm')}`);
     // change ws id to serial key if it exists
-    if(paramsSplitted.length > 0) {
+    if (paramsSplitted.length > 0) {
         ws.id = paramsSplitted[1];
         lookup.push(ws.id);
     } else {
@@ -60,11 +62,24 @@ wss.on('connection' , async (ws, req) => {
     }
 
     // send command
-    // search serial key to send settings
+    // search serial key to send last settings saved
     const device = await Device.findOne({deviceSerialKey: ws.id});
     let deviceSettings;
+    // let lastStatusRegistered = {};
+
     if(device) {
         deviceSettings = await Settings.findOne({deviceId: device.id});
+
+        // catch the last status from all commands
+        /* const wateringRoutineMode = await Command.find({categoryName: COMMANDS.WATERING_ROUTINE_MODE.NAME}).sort( {createdAt: -1}).limit(1);
+        const autoPump = await Command.find({categoryName: COMMANDS.WATERING_ROUTINE_PUMP.NAME}).sort( {createdAt: -1}).limit(1);
+        const manualPump = await Command.find({categoryName: COMMANDS.MANUAL_PUMP.NAME}).sort( {createdAt: -1}).limit(1);
+
+        lastStatusRegistered = { 
+            wateringRoutineMode: wateringRoutineMode[0].commandName, 
+            autoPump: autoPump[0].commandName, 
+            manualPump: manualPump[0].commandName
+        }; */
     }
 
     if(deviceSettings) {
@@ -92,13 +107,13 @@ wss.on('connection' , async (ws, req) => {
 
         ws.send('SETTINGS');
         const settingsString = `${backlight},${minutesToMilliseconds(pumpTimer)},${secondsToMilliseconds(localMeasureInterval)},${minutesToMilliseconds(remoteMeasureInterval)},${startTime},${endTime},${minutesToMilliseconds(duration)},${minutesToMilliseconds(interval)}`;
-        console.log(settingsString);
         ws.send(settingsString);
     }
 
     ws.on('message', async (message) => {
         const userIdFromDevice = _.get(device, 'userId');
-        console.log(lookup);
+        //console.log(lookup);
+        
         /* let deviceSerialKey = message.substr(0,2);
         if (deviceSerialKey === "$S") {
             deviceSerialKey = message.substr(2,deviceSerialKey.lenght);
@@ -125,11 +140,12 @@ wss.on('connection' , async (ws, req) => {
             ws.id = `bethere_home_${ws.id}`;
         }
 
-        console.log(`Received message from ${ws.id}=> ${message}`);
-        // save last command to only update bd if the client sends a different feedback message
-        
-        if(lastCommand != message) {
-            if(message === "MP0") {
+        console.log(`Received message from ${ws.id} time#${moment().tz('America/Sao_Paulo').format('HH:mm')} => ${message}`);
+        // save last command to update bd if the client sends a different feedback message
+        const isFeedbackMessage = message.includes('feedback#')
+
+        if (lastCommand && (lastCommand !== message)) {
+            if (message === "MP0") {
                 await Command.create({
                     "categoryName": COMMANDS.MANUAL_PUMP.NAME,
                     "commandName": "MP0",
@@ -140,6 +156,7 @@ wss.on('connection' , async (ws, req) => {
             }
 
             if(message === "MP1") {
+                console.log("aqui")
                 await Command.create({
                     "categoryName": COMMANDS.MANUAL_PUMP.NAME,
                     "commandName": "MP1",
@@ -199,7 +216,7 @@ wss.on('connection' , async (ws, req) => {
                 });
             }
         }
-        lastCommand = message;
+        lastCommand = isFeedbackMessage ? message.substr(9, message.length) : message
     });
 
     ws.on('close', () => {
@@ -231,9 +248,9 @@ app.post('/send', async function (req, res) {
 
     // check if the deviceId requested to send command exists
     const device = await Device.findOne({_id: deviceId});
-    if(!device) 
-        return res.send({error: true, message: "Dispositivo não encontrado"});
 
+    if(!device)
+        return res.send({error: true, message: "Dispositivo não encontrado"});
 
     const userDevices = _.get(user, 'devices'); // array of ids assigned to that user
     
@@ -258,11 +275,6 @@ app.post('/send', async function (req, res) {
                 if(req.body.commandName === "SETTINGS") {
                     client.send(req.body.value);
                 }
-            
-                // WA until next local station version (beginPumpTimer missing in the hardware):
-                if(req.body.commandName === "WR_PUMP_OFF") {
-                    client.send("MP0");
-                }
 
                 if(req.body.commandName === "MP0") {
                     client.send("WR_PUMP_OFF");
@@ -272,8 +284,6 @@ app.post('/send', async function (req, res) {
     });
     res.send(command);
 });
-
-
 
 app.post('/ls-status', async function(req, res) {
     const { deviceSerialKey } = req.body;
