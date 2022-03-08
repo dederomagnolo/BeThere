@@ -63,8 +63,10 @@ const char *ssidServer = "BeThere Access Point";
 const char *passwordServer = "welcome123";
 
 // Network credentials - Hardcoded connection
- char ssidDev[] = "Satan`s Connection";
- char passwordDev[] = "tininha157";
+// char ssidDev[] = "Satan`s Connection";
+// char passwordDev[] = "tininha157";
+char ssidDev[] = "Romagnolo";
+char passwordDev[] = "melzinha123";
 //char ssid[] = "iPhone de Débora";
 //char password[] = "texas123";
 char ssid[] = "Cogumelos Sao Carlos";
@@ -86,7 +88,7 @@ const char * myWriteAPIKey = "ZY113X3ZSZG96YC8";
 
 // websocket infos
 const char* websocketServerHost = "https://bethere-be.herokuapp.com/";
-const char* websocketServerHostLocal = "http://192.168.0.12";
+const char* websocketServerHostLocal = "http://192.168.15.23";
 const char* websocketServerPort = "8080";
 
 // #### OBJECT DECLARATIONS ####
@@ -306,19 +308,20 @@ void setup() {
     if (messageFromRemote == "WR_ON") {
       wateringRoutineMode = true;
       if(beginWateringRoutineTimer == 0) {
-        wsclient.send("Auto Watering ON");
+        wsclient.send("feedback#WR_ON");
         beginWateringRoutineTimer = millis();
       }
     }
 
     if (messageFromRemote == "WR_OFF") {
       wateringRoutineMode = false;
-      wsclient.send("Auto Watering OFF");
+      wsclient.send("feedback#WR_OFF");
       beginWateringRoutineTimer = 0;
     }
 
     if (messageFromRemote == "WR_PUMP_OFF") {
       digitalWrite(pumpInputRelay, HIGH);
+      wsclient.send("feedback#WR_PUMP_OFF");
       beginWateringRoutineTimer = millis();
       beginPumpTimer = 0;
     }
@@ -326,6 +329,7 @@ void setup() {
     // CHANGE PUMP STATUS
     if (messageFromRemote == "MP0") {
       digitalWrite(pumpInputRelay, HIGH);
+      wsclient.send("feedback#MP0");
       beginPumpTimer = 0;
       manualPump = false;
 
@@ -336,6 +340,7 @@ void setup() {
 
     if (messageFromRemote == "MP1") {
       digitalWrite(pumpInputRelay, LOW);
+      wsclient.send("feedback#MP1");
       beginPumpTimer = millis();
       manualPump = true;
     }
