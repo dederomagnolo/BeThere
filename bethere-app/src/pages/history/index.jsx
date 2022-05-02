@@ -53,7 +53,10 @@ const History = () => {
         const res = await callApi(
             'POST', 
             '/commands/history', 
-            { dayToRetrieveHistory: date }
+            { 
+                deviceId,
+                dayToRetrieveHistory: date 
+            }
         );
         const historyForDate = _.get(res, 'historyForDate');
         setCommandList(historyForDate);
@@ -127,7 +130,6 @@ const History = () => {
     }
 
     const orderedCommandsList = _.orderBy(commandList, 'createdAt', 'desc');
-    console.log(orderedCommandsList)
 
     return (
         <Container style={{ height: "100%", minWidth: "80%" }}>
