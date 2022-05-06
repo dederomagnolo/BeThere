@@ -30,6 +30,7 @@ void setup(){
     digitalWrite(RELAY, HIGH);
     Serial.println("ON");
     Serial.println(RELAY);
+    
     request->send(200, "text/plain", "OK");
   });
   server.on("/RELAY_OFF", HTTP_GET, [](AsyncWebServerRequest *request){

@@ -212,7 +212,6 @@ export const Dashboard = () => {
         // field 4: internal temperature
         // field 5: external humidity
         // field 6: external temperature
-        // field 7: pump indicator
 
         updateFields(4);
         updateFields(6);
@@ -223,6 +222,7 @@ export const Dashboard = () => {
         
     const updatePump = async () => {
         try {
+        console.log('aq')
         setBlockButtonFlag(true);
         const lastStatusAll = await api.post(`${bethereUrl}/commands/laststatus/all`);
 

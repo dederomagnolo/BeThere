@@ -8,7 +8,6 @@ const http = require('http');
 const cors = require('cors');
 const tz = require('moment-timezone');
 const _ = require('lodash');
-const COMMANDS = require('./utils/consts');
 
 dotenv.config();
 
@@ -17,13 +16,16 @@ const Device = require('./app/models/device');
 const Settings = require('./app/models/settings');
 const User = require('./app/models/user');
 const {minutesToMilliseconds, secondsToMilliseconds} = require('./utils');
+const sendCommandWhenClientSendFeedback = require('./utils/functions');
 
 const app = express();
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(cors());
 
-app.get('/', (req, res) => {
+app.get('/?id=35U2I-MAQOO-EXQX5-U43P', (req, res) => {
+    const id = req.query.id;
+
     res.send("BeThere WebSocket - Home");
 });
 
@@ -142,81 +144,18 @@ wss.on('connection' , async (ws, req) => {
 
         console.log(`Received message from ${ws.id} time#${moment().tz('America/Sao_Paulo').format('HH:mm')} => ${message}`);
         // save last command to update bd if the client sends a different feedback message
-        const isFeedbackMessage = message.includes('feedback#')
+        const isFeedbackMessage = message.includes('feedback#');
+        const deviceIdFromSerial = await Device.findOne({ deviceSerialKey: ws.id });
 
-        if (lastCommand && (lastCommand !== message)) {
-            if (message === "MP0") {
-                await Command.create({
-                    "categoryName": COMMANDS.MANUAL_PUMP.NAME,
-                    "commandName": "MP0",
-                    "changedFrom": ws.id,
-                    "userId": userIdFromDevice,
-                    "deviceId": ws.id
-                });
-            }
-
-            if(message === "MP1") {
-                console.log("aqui")
-                await Command.create({
-                    "categoryName": COMMANDS.MANUAL_PUMP.NAME,
-                    "commandName": "MP1",
-                    "changedFrom": ws.id,
-                    "userId": userIdFromDevice,
-                    "deviceId": ws.id
-                });
-            }
-    
-            if(message === "LCD_OFF") {
-                await Command.create({
-                    "categoryName": COMMANDS.BACKLIGHT.NAME,
-                    "commandName": "LCD_OFF",
-                    "changedFrom": ws.id,
-                    "userId": userIdFromDevice,
-                    "deviceId": ws.id
-                });
-            }
-    
-            if(message === "WR_PUMP_ON") {
-                await Command.create({
-                    "categoryName": COMMANDS.WATERING_ROUTINE_PUMP.NAME,
-                    "changedFrom": ws.id,
-                    "commandName": "WR_PUMP_ON",
-                    "userId": userIdFromDevice,
-                    "deviceId": ws.id
-                });
-            }
-    
-            if(message === "WR_PUMP_OFF") {
-                await Command.create({
-                    "categoryName": COMMANDS.WATERING_ROUTINE_PUMP.NAME,
-                    "changedFrom": ws.id,
-                    "commandName": "WR_PUMP_OFF",
-                    "userId": userIdFromDevice,
-                    "deviceId": ws.id
-                });
-            }
-    
-            if(message === "WR_OFF") {
-                await Command.create({
-                    "categoryName": COMMANDS.WATERING_ROUTINE_MODE.NAME,
-                    "changedFrom": ws.id,
-                    "commandName": "WR_OFF",
-                    "userId": userIdFromDevice,
-                    "deviceId": ws.id
-                });
-            }
-    
-            if(message === "WR_ON") {
-                await Command.create({
-                    "categoryName": COMMANDS.WATERING_ROUTINE_MODE.NAME,
-                    "changedFrom": ws.id,
-                    "commandName": "WR_ON",
-                    "userId": userIdFromDevice,
-                    "deviceId": ws.id
-                });
-            }
+        if (lastCommand && (lastCommand !== message) && !isFeedbackMessage) {
+            sendCommandWhenClientSendFeedback({
+                commandFromRemote: message,
+                userId: userIdFromDevice,
+                deviceId: _.get(deviceIdFromSerial, '_id'),
+                deviceSerialKey: ws.id
+            });
         }
-        lastCommand = isFeedbackMessage ? message.substr(9, message.length) : message
+        lastCommand = isFeedbackMessage ? message.substr(9, message.length) : message;
     });
 
     ws.on('close', () => {
@@ -228,7 +167,7 @@ wss.on('connection' , async (ws, req) => {
         ws.terminate();
     });
 
-    ws.timer = setInterval(function(){
+    ws.timer = setInterval(function() {
         pingpong(ws);
     },30000);
 });
@@ -236,7 +175,7 @@ wss.on('connection' , async (ws, req) => {
 function pingpong(ws) {
     console.log(ws.id+' send a ping');
     ws.send(`time#${moment().tz('America/Sao_Paulo').format('HH:mm')}`);
-    ws.ping('coucou',{},true);
+    ws.ping('coucou', {}, true);
 }
 
 app.post('/send', async function (req, res) {
