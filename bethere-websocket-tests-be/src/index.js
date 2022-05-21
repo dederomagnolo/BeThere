@@ -23,9 +23,7 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 
-app.get("/?id=35U2I-MAQOO-EXQX5-U43P", (req, res) => {
-  const id = req.query.id;
-
+app.get("/", (req, res) => {
   res.send("BeThere WebSocket - Home");
 });
 
@@ -52,8 +50,10 @@ wss.on("connection", async (ws, req) => {
         ws.id = 'error to get device params';
       }
 
-      const device = await Device.findOne({ deviceSerialKey: ws.id });
-      deviceSettings = await Settings.findOne({ deviceId: device.id });
+      const clientSerialKey = _.get(ws, 'id');
+      const device = await Device.findOne({ deviceSerialKey: clientSerialKey});
+      const deviceId =  _.get(device, 'id')
+      deviceSettings = await Settings.findOne({ deviceId });
 
       if (deviceSettings) {
         const {
@@ -130,9 +130,14 @@ wss.on("connection", async (ws, req) => {
 });
 
 function pingpong(ws) {
-  console.log(ws.id + " send a ping");
-  ws.send(`time#${moment().tz("America/Sao_Paulo").format("HH:mm")}`);
-  ws.ping("coucou", {}, true);
+  if(ws.readyState === WebSocket.OPEN) {
+    console.log(ws.id + " send a ping");
+    ws.send(`time#${moment().tz("America/Sao_Paulo").format("HH:mm")}`);
+    ws.ping("coucou", {}, true);
+  }
+  // console.log("Client disconnected");
+  // clearInterval(ws.timer);
+  // ws.terminate();
 }
 
 app.post("/send", async function (req, res) {
