@@ -12,8 +12,9 @@
 #include <BeThere.h>
 
 // CONFIGS
-#define ENABLE_DEV_MODE false
-#define ENABLE_RELAY_PUSH_BUTTON false
+#define ENABLE_RELAY_LOW false // to inverted relay logics when necessary
+#define ENABLE_DEV_MODE true
+#define ENABLE_RELAY_PUSH_BUTTON true
 #define ENABLE_ACCESS_POINT false
 #define ENABLE_DEBUGGER_LOGS true
 #define RECONNECTION_RETRIES 8
@@ -26,7 +27,7 @@
 #define DHT_TYPE DHT22
 
 // VINI
-#define PUSH_BUTTON_PIN 14 // d5
+#define PUSH_BUTTON_PIN 12 // d6
 
 // #### COMMANDS ####
 // Commands
@@ -65,10 +66,10 @@ char passwordProd[] = "cogu2409";
 // char ssidProd[] = "Romagnolo 2.4G";
 // char passwordProd[] = "melzinha123";
 // WiFi Credentials - DEV
-char ssidDev[] = "Romagnolo 2.4G";
-char passwordDev[] = "melzinha123";
-// char ssidDev[] = "Satan`s Connection";
-// char passwordDev[] = "tininha157";
+//char ssidDev[] = "Romagnolo 2.4G";
+//char passwordDev[] = "melzinha123";
+char ssidDev[] = "Satan`s Connection";
+char passwordDev[] = "tininha157";
 
 // Timers
 unsigned long beginSendMeasureTimer = 0;
@@ -113,7 +114,7 @@ int minutes;
 
 // DHT PINS
 DHT dht(DHT_PIN, DHT_TYPE);
-DHT dht2(DHT2_PIN, DHT_TYPE);
+// DHT dht2(DHT2_PIN, DHT_TYPE);
 // DHT dht3(DHT_PIN, DHT_TYPE);
 
 // #### SERVER SETTINGS ####
@@ -285,16 +286,24 @@ void onEventsCallback(WebsocketsEvent event, String data) {
 }
 
 // #### IO FUNCTIONS ####
+void writeRelayState(bool state) {
+  bool stateToWrite = ENABLE_RELAY_LOW ? state : !state;
+  Serial.print("==================================");
+  Serial.println(stateToWrite);
+  digitalWrite(RELAY_PIN, stateToWrite);
+}
+
 void resetRelayState() {
   wsclient.send("WR_PUMP_OFF"); // to make sure automation is off in case of a reset
   wsclient.send("MP0"); 
 }
 
 void startManualRelayAction() {
-  digitalWrite(RELAY_PIN, LOW);
+  writeRelayState(LOW);
   wsclient.send("MP1");
   beginRelayTimer = millis();
   manualRelayAction = true;
+  Serial.println("start manual relay");
 }
 
 void handleApplyCommand (String message) {
@@ -338,7 +347,7 @@ void handleApplyCommand (String message) {
   }
 
   if (message == "WR_PUMP_OFF") {
-    digitalWrite(RELAY_PIN, HIGH);
+    writeRelayState(HIGH);
     wsclient.send("feedback#WR_PUMP_OFF");
     // reset watering routine timer if relay is triggered to off when in routine mode
     beginWateringRoutineTimer = millis();
@@ -347,7 +356,7 @@ void handleApplyCommand (String message) {
 
   // CHANGE PUMP STATUS
   if (message == "MP0") {
-    digitalWrite(RELAY_PIN, HIGH);
+    writeRelayState(HIGH);
     wsclient.send("feedback#MP0");
     beginRelayTimer = 0;
     manualRelayAction = false;
@@ -418,7 +427,7 @@ void setup() {
 
   // begin DHT sensors
   dht.begin();
-  dht2.begin();
+  // dht2.begin();
 
   // websocket events
   wsclient.onEvent(onEventsCallback);
@@ -461,19 +470,22 @@ void setup() {
     handleApplyCommand(messageFromRemote);
 
     int currentPumpStatus = digitalRead(RELAY_PIN);
+    Serial.print("current pump status");
+    Serial.print(currentPumpStatus);
     // overwrite the current status in case of internet failure
-    digitalWrite(RELAY_PIN, currentPumpStatus);
+    // using digital write to maintain the status withou inversion ENABLE_RELAY_LOW
+    digitalWrite(RELAY_PIN, currentPumpStatus); 
     disconnectedFromServer = false;
     yield();
   });
   
   // initial state - relay
   pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(RELAY_PIN, HIGH); // relay off
+  writeRelayState(HIGH); // relay off
 
   if(ENABLE_RELAY_PUSH_BUTTON) {
     pinMode(PUSH_BUTTON_PIN, INPUT);
-    digitalWrite(PUSH_BUTTON_PIN, LOW);
+    // writeRelayState(LOW); 
   }
   // Init SHT20 Sensor
 //  sht20.initSHT20(); 
@@ -507,7 +519,7 @@ void loop() {
     // Serial.print("Pump on time:");
     // Serial.println((millis() - beginRelayTimer)/60000);
     if ((millis() - beginRelayTimer) > settings[1]) {
-      digitalWrite(RELAY_PIN, HIGH);
+      writeRelayState(HIGH);
       beginRelayTimer = 0;
       wsclient.send("MP0");
       Serial.println("Pump finished the work!");
@@ -527,7 +539,7 @@ void loop() {
         Serial.println("Auto watering activated");
         autoRelayAction = true;
         wsclient.send("WR_PUMP_ON");
-        digitalWrite(RELAY_PIN, LOW);
+        writeRelayState(LOW);
         beginRelayTimer = millis(); // start pump timer
         beginWateringRoutineTimer = millis();
       }
@@ -535,7 +547,7 @@ void loop() {
 
     if(!manualRelayAction && autoRelayAction) {
       if (millis() - beginRelayTimer > settings[6]) {
-        digitalWrite(RELAY_PIN, HIGH);
+        writeRelayState(HIGH);
         wsclient.send("WR_PUMP_OFF");
         beginRelayTimer = 0;
         beginWateringRoutineTimer = millis();
@@ -545,8 +557,8 @@ void loop() {
     }
   }
 
-  float internalHumidity = dht2.readHumidity();
-  float internalTemperature = dht2.readTemperature();
+//  float internalHumidity = dht2.readHumidity();
+//  float internalTemperature = dht2.readTemperature();
 
   float externalHumidity = dht.readHumidity();
   float externalTemperature = dht.readTemperature();
@@ -632,9 +644,14 @@ void loop() {
 
   if(ENABLE_RELAY_PUSH_BUTTON) {
     bool buttonState = digitalRead(PUSH_BUTTON_PIN);
-    Serial.println(buttonState);
-    Serial.println(manualRelayAction);
+//    Serial.print("Button state:");
+//    Serial.println(buttonState);
+//    Serial.print("Manual Relay");
+//    Serial.println(manualRelayAction);
+//    Serial.print("Relay pin");
+//    Serial.println(digitalRead(RELAY_PIN));
     if(buttonState && !manualRelayAction) {
+      Serial.println("#############################");
       startManualRelayAction();
     }
   }
