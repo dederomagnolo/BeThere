@@ -35,6 +35,41 @@ router.post('/register', async (req, res)=> {
     }
 });
 
+router.post('/change-password', async (req, res) => {
+    const { username, password, newPassword, confirmNewPassword } = req.body;
+
+    if(!newPassword || !confirmNewPassword) {
+        return res.status(400).send({ error: 'New password not provided!'});
+    }
+
+    const user = await User.findOne({ username }).select('password');
+    if(!user) {
+        return res.status(400).send({ error: 'User not found!'});
+    }
+
+    if(!await bcrypt.compare(password, user.password)) {
+        return res.status(400).send({ error: 'Invalid password!'});
+    }
+
+    if(newPassword !== confirmNewPassword) {
+        return res.status(400).send({ error: 'Given passwords not match!'});
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    const updatePassword = await User.findOneAndUpdate(
+        { username },
+        { password: hashedPassword }
+    )
+
+    if(!updatePassword) {
+        return res.status(400).send({ error: 'Error has ocurred, try again later.'});
+    }
+
+    res.send({
+        message: "Password changed."
+    });
+})
+
 router.post('/authenticate' , async (req, res) => {
     const { username, password } = req.body;
 

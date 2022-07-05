@@ -50,6 +50,8 @@ wss.on("connection", async (ws, req) => {
         ws.id = 'error to get device params';
       }
 
+      console.log({lookup})
+
       const clientSerialKey = _.get(ws, 'id');
       const device = await Device.findOne({ deviceSerialKey: clientSerialKey});
       const deviceId =  _.get(device, 'id')
@@ -62,10 +64,13 @@ wss.on("connection", async (ws, req) => {
           localMeasureInterval,
           remoteMeasureInterval,
           wateringRoutine,
+          moistureSensor
         } = deviceSettings;
   
         const { enabled, startTime, endTime, interval, duration } =
           wateringRoutine;
+
+        const { setPoint } = moistureSensor;
   
         if (enabled) {
           ws.send("WR_ON");
@@ -80,7 +85,7 @@ wss.on("connection", async (ws, req) => {
           remoteMeasureInterval
         )},${startTime},${endTime},${minutesToMilliseconds(
           duration
-        )},${minutesToMilliseconds(interval)}`;
+        )},${minutesToMilliseconds(interval)},${setPoint}`;
         ws.send(settingsString);
       }
     }

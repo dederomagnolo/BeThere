@@ -1,59 +1,77 @@
-const mongoose = require('../../database');
+const mongoose = require("../../database");
 
 const SettingsSchema = new mongoose.Schema({
-    deviceId:{
-        type: String,
-        required: true
+  deviceId: {
+    type: String,
+    required: true,
+  },
+  settingsName: {
+    type: String,
+    required: false,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  backlight: {
+    type: Number,
+    required: false,
+    default: 22, //hrs?
+  },
+  pumpTimer: {
+    type: Number,
+    required: false,
+    default: 10, //mins
+  },
+  localMeasureInterval: {
+    type: Number,
+    required: false,
+    default: 5, //seconds
+  },
+  remoteMeasureInterval: {
+    type: Number,
+    required: false,
+    default: 15, //mins
+  },
+  wateringRoutine: {
+    enabled: {
+      type: Boolean,
+      required: true,
+      default: false,
     },
-    settingsName: {
-        type: String,
-        required: false
+    startTime: {
+      type: Number,
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
+    endTime: {
+      type: Number,
     },
-    backlight: {
+    interval: {
+      type: Number,
+    },
+    duration: {
+      type: Number,
+    },
+  },
+  moistureSensor: {
+    model: {
+      type: String,
+    },
+    range: {
+      min: {
         type: Number,
-        required:false,
-        default: 22 //hrs?
-    },
-    pumpTimer: {
+        default: 1,
+      },
+      max: {
         type: Number,
-        required: false,
-        default: 10 //mins
+        default: 1024,
+      },
     },
-    localMeasureInterval: {
-        type: Number,
-        required: false,
-        default: 5 //seconds
+    setPoint: {
+      type: Number,
     },
-    remoteMeasureInterval: {
-        type: Number,
-        required: false,
-        default: 15 //mins
-    },
-    wateringRoutine: {
-        enabled: {
-            type: Boolean,
-            required: true,
-            default: false
-        },
-        startTime: {
-            type: Number
-        },
-        endTime: {
-            type: Number
-        },
-        interval: {
-            type: Number
-        },
-        duration: {
-            type: Number
-        } 
-    }
+  },
 });
 
-const Settings = mongoose.model('Settings', SettingsSchema);
+const Settings = mongoose.model("Settings", SettingsSchema);
 
 module.exports = Settings;
