@@ -11,7 +11,7 @@ enum SERIAL_KEY_PROD_SHORT {
 class BeThere {
 	public:
         String getAccessPointPage();
-        String getServerUri(bool devMode, bool prodTest);
+        String getServerUri(bool devMode, bool useLocalHost);
         bool getDevMode();
         String getSerialKey(enum SERIAL_KEY_PROD_SHORT shortDeviceId);
         char * getConfig(enum SERIAL_KEY_PROD_SHORT shortDeviceId);

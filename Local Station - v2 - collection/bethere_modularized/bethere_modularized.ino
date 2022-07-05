@@ -13,8 +13,8 @@
 #include <BeThere.h>
 
 // #### DEVICE TO DEPLOY ####
-#define SHORT_SERIAL_KEY D_35U2I
-// #define SHORT_SERIAL_KEY D_M5YZ5
+// #define SHORT_SERIAL_KEY D_35U2I
+#define SHORT_SERIAL_KEY D_M5YZ5
 
 // #### COMMANDS ####
 #define RELAY1_ON "MP1"
@@ -25,8 +25,9 @@
 #define SETTINGS "SETTINGS"
 
 // #### STATIC CONFIGS ####
-#define USE_PROD_TEST_SERIAL false
-#define ENABLE_DEV_MODE false
+#define USE_LOCAL_NETWORK true
+#define USE_LOCAL_HOST false
+#define ENABLE_DEV_MODE true
 #define ENABLE_ACCESS_POINT false
 #define ENABLE_DEBUGGER_LOGS true
 #define RECONNECTION_RETRIES 8
@@ -38,6 +39,7 @@
 #define DHT_TYPE DHT22
 
 // #### CONFIGS FROM SERIAL - DEFAULT VALUES ####
+bool ENABLE_LCD = true;
 bool ENABLE_RELAY_LOW = false;
 bool ENABLE_RELAY_PUSH_BUTTON = false;
 bool ENABLE_ANALOG_SENSOR = false;
@@ -110,7 +112,8 @@ String settingsName[9] = {
   "wateringRoutineEndTime",
   "wateringRoutinePumpDuration",
   "wateringRoutineInterval",
-  "moistureSensorSetPoint"};
+  "moistureSensorSetPoint"
+};
 
 // #### DHT VARIABLES ####
 float internalTemperature = 0;
@@ -150,23 +153,49 @@ IPAddress ap_subnet(255, 255, 255, 0); //Subnet mask
 IPAddress dns(8,8,8,8); //DNS (could be 8,8,8,8 for google dns or any other DNS
 
 // #### FUNCTIONS ####
+// #### GENERAL USE ####
+void debuggerLog(String m) {
+ if(ENABLE_DEBUGGER_LOGS) {
+  Serial.println(m);
+ }
+}
+
+void printToLcd(int col, int row, String stringToPrint) {
+  if(!ENABLE_LCD) {
+   return;
+  }
+
+  lcd.setCursor(col, row);
+  lcd.print(stringToPrint);
+}
+
+void clearLcd () {
+  if(!ENABLE_LCD) {
+   return;
+  }
+  lcd.clear();
+}
+
 // ##### CONFIGS ####
 void printConfigs() {
-  Serial.println("\n#############");
-  Serial.println("ENABLE_RELAY_LOW: " + String(ENABLE_RELAY_LOW));
-  Serial.println("ENABLE_RELAY_PUSH_BUTTON: " + String(ENABLE_RELAY_PUSH_BUTTON));
+  Serial.println("\n####################################");
   Serial.println("SERIAL_KEY_PROD: " + String(SERIAL_KEY_PROD));
+  Serial.println("ENABLE_RELAY_LOW: " + String(ENABLE_RELAY_LOW));
+  Serial.println("ENABLE_LCD: " + String(ENABLE_LCD));
+  Serial.println("ENABLE_RELAY_PUSH_BUTTON: " + String(ENABLE_RELAY_PUSH_BUTTON));
   Serial.println("RELAY_PIN: " + String(RELAY_PIN));
   Serial.println("PUSH_BUTTON_PIN: " + String(PUSH_BUTTON_PIN));
-  Serial.println("#############");
+  Serial.println("TS_CHANNEL_NUM: " + String(TS_CHANNEL_NUM));
+  Serial.println("TS_WRITE_API_KEY: " + String(TS_WRITE_API_KEY));
+  Serial.println("####################################");
 }
 
 void setConfig() {
   Serial.println("\n####################################");
   Serial.print("CONFIGS FOR ");
   Serial.print(BeThere.getSerialKey(SHORT_SERIAL_KEY));
-  Serial.println("\n####################################");
-  // Serial.println(BeThere.getConfig(D_M5YZ5));
+  Serial.println("####################################");
+  // Serial.println(BeThere.getConfig(SHORT_SERIAL_KEY));
 
   // parse JSON from lib
   DeserializationError error = deserializeJson(doc, BeThere.getConfig(SHORT_SERIAL_KEY));
@@ -181,10 +210,13 @@ void setConfig() {
   ENABLE_RELAY_LOW = doc["ENABLE_RELAY_LOW"];
   ENABLE_RELAY_PUSH_BUTTON = doc["ENABLE_RELAY_PUSH_BUTTON"];
   ENABLE_ANALOG_SENSOR = doc["ENABLE_ANALOG_SENSOR"];
+  ENABLE_LCD = doc["ENABLE_LCD"];
   RELAY_PIN = doc["RELAY_PIN"];
   if(ENABLE_RELAY_PUSH_BUTTON) {
     PUSH_BUTTON_PIN = doc["PUSH_BUTTON_PIN"];
   }
+  TS_CHANNEL_NUM = doc["TS_CHANNEL_NUM"];
+  strcpy(TS_WRITE_API_KEY, doc["TS_WRITE_API_KEY"]);
   strcpy(SSID_PROD, doc["SSID"]);
   strcpy(SSID_PASSWORD_PROD, doc["PASSWORD"]);
   strcpy(SERIAL_KEY_PROD, doc["SERIAL_KEY_PROD"]);
@@ -209,17 +241,14 @@ void handleWithoutWiFiConfig() {
   while (withoutUserWiFiConfig) {
     server.handleClient();
     Serial.println("...waiting for client");
-     lcd.setCursor(0, 0);
-     lcd.print("Without connection");
-     lcd.setCursor(0, 1);
-     lcd.print("Search WiFi BeThere");
+    printToLcd(0, 0, "Without connection");
+    printToLcd(0, 1, "Search WiFi BeThere");
 
     if (bypassWifi) {
-     lcd.clear();
-     lcd.setCursor(0 , 0);
-     lcd.print("Starting!");
+     clearLcd();
+     printToLcd(0, 0, "Starting!");
      delay(1500);
-     lcd.clear();
+     clearLcd();
      withoutUserWiFiConfig = false;
     };
     ESP.wdtFeed();
@@ -233,7 +262,7 @@ void initWifi(String ssid = "noop", String password = "noop") {
     WiFi.begin(ssid, password);
   } else {
     WiFi.mode(WIFI_STA);
-    ENABLE_DEV_MODE || USE_PROD_TEST_SERIAL 
+    ENABLE_DEV_MODE || USE_LOCAL_NETWORK
       ? WiFi.begin(SSID_DEV, SSID_PASSWORD_DEV) 
       : WiFi.begin(SSID_PROD, SSID_PASSWORD_PROD);
   }
@@ -243,8 +272,7 @@ void initWifi(String ssid = "noop", String password = "noop") {
 void recoverWiFiConnection() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Connection lost!");
-    lcd.setCursor(15, 0);
-    lcd.print("*");
+    printToLcd(15, 0, "*");
     WiFi.disconnect();
     delay(200);
     WiFi.reconnect();
@@ -252,15 +280,8 @@ void recoverWiFiConnection() {
     yield();
     ESP.wdtFeed();
   } else {
-    lcd.setCursor(15, 0);
-    lcd.print(" ");
+    printToLcd(15, 0, " ");
   }  
-}
-
-void debuggerLog(String m) {
- if(ENABLE_DEBUGGER_LOGS) {
-  Serial.println(m);
- }
 }
 
 // #### LOCAL SERVER FUNCTIONS ####
@@ -276,7 +297,7 @@ void handleBypassWifi() {
 
 // Dispaly values and write to memmory
 void handleSubmit() {
-  lcd.clear();
+  clearLcd();
   String response = "<p>The following configuration was saved with success.";
   response += "<br>";
   response += "network name:";
@@ -291,7 +312,7 @@ void handleSubmit() {
   server.send(200, "text/html", response);
 
   initWifi(server.arg("ssid"), server.arg("Password"));
-  lcd.clear();
+  clearLcd();
 }
 
 void handleRoot() {
@@ -329,14 +350,10 @@ void sendSerialKey () {
   String onOpenMessage = "BeThere is alive";
   String marker = "$";
   if(ENABLE_DEV_MODE) {
-    if(USE_PROD_TEST_SERIAL) {
-      wsclient.send(onOpenMessage + marker + SERIAL_KEY_PROD_TEST);
-    } else {
-      wsclient.send(onOpenMessage + marker + SERIAL_KEY_DEV);
-    }
+    wsclient.send(onOpenMessage + marker + SERIAL_KEY_DEV);
   } else {
     wsclient.send(onOpenMessage + marker + SERIAL_KEY_PROD);
-  }  
+  }
 }
 
 // WEBSOCKET EVENTS CALLBACK
@@ -395,8 +412,8 @@ void startManualRelayAction() {
 void handleApplyCommand (String message) {
   // get time from server message
   if (message.indexOf("time") != -1) {
-      hours = message.substring(5, 7).toInt();
-      minutes = message.substring(8, 10).toInt();
+    hours = message.substring(5, 7).toInt();
+    minutes = message.substring(8, 10).toInt();
   }
 
   if (message == "SETTINGS") {
@@ -459,8 +476,7 @@ void handleApplyCommand (String message) {
 
 void handleWebsocketConnection () {
   if (wsclient.available()) {
-    lcd.setCursor(15, 1);
-    lcd.print(" ");
+    printToLcd(15, 1, " ");
     if ((millis() - pongTimer) > 42000) {
       Serial.println("no response, close connection");
       wsclient.close();
@@ -469,10 +485,9 @@ void handleWebsocketConnection () {
     ESP.wdtFeed();
   } else {
     Serial.println("reconnecting to websocket server...");
-    lcd.setCursor(15, 1);
-    lcd.print("*");
+    printToLcd(15, 1, "*");
     websocketReconnectionRetries++;
-    bool connected = wsclient.connect(BeThere.getServerUri(ENABLE_DEV_MODE, USE_PROD_TEST_SERIAL));
+    bool connected = wsclient.connect(BeThere.getServerUri(ENABLE_DEV_MODE, USE_LOCAL_HOST));
     if (connected) {
       // reset retries
       websocketReconnectionRetries = 0;
@@ -504,7 +519,7 @@ void setup() {
 
   printConfigs();
   // connect with websocket server
-  String serverUri = BeThere.getServerUri(ENABLE_DEV_MODE, USE_PROD_TEST_SERIAL);
+  String serverUri = BeThere.getServerUri(ENABLE_DEV_MODE, USE_LOCAL_HOST);
   bool connected = wsclient.connect(serverUri);
   if (connected) {
     Serial.print("Connected with BeThere websocket server:");
@@ -589,12 +604,9 @@ void setup() {
   lcd.begin(16, 2);
   lcd.init();
   lcd.backlight();
-  lcd.setCursor(0, 0);
-  delay(500);
-  lcd.print("BeThere started");
+  printToLcd(0,0,"BeThere started");
   delay(1000);
-  lcd.setCursor(0, 0);
-  lcd.clear();
+  clearLcd();
 }
 
 void loop() {
@@ -657,49 +669,37 @@ void loop() {
 
   float externalHumidity = dht.readHumidity();
   float externalTemperature = dht.readTemperature();
-  
-  lcd.setCursor(0, 0);
-  lcd.print("H:");
-  lcd.setCursor(2, 0);
+
+  printToLcd(0, 0, "H:");
 
   if (isnan(internalHumidity)) {
-    lcd.print("--.-");
+    printToLcd(2, 0, "--.-");
   } else {
-    lcd.print(internalHumidity, 1);
-    lcd.setCursor(6, 0);
-    lcd.print(" ");
+    printToLcd(2, 0, String(internalHumidity));
+    printToLcd(6, 0, " ");
   }
-
-    lcd.setCursor(0 , 1);
-    lcd.print("T:");
-    lcd.setCursor(2 , 1);
+  
+  printToLcd(0, 1, "T:");
 
   if (isnan(internalTemperature)) {
-    lcd.print("--.-");
+    printToLcd(2, 1, "--.-");
   } else {
-    lcd.print(internalTemperature, 1);
+    printToLcd(2, 1, String(internalTemperature));
   }
-
-  // delay(200);
-
-  lcd.setCursor(7, 0);
-  lcd.print("H2:");
-  lcd.setCursor(10, 0);
+  printToLcd(7, 0 , "H2:");
 
   if (isnan(externalHumidity)) {
-    lcd.print("--.-");
+    printToLcd(10, 0, "--.-");
   } else {
-    lcd.print(externalHumidity, 1);
+    printToLcd(10, 0, String(externalHumidity));
   }
-
-  lcd.setCursor(7 , 1);
-  lcd.print("T2:");
-  lcd.setCursor(10 , 1);
+  
+  printToLcd(7, 1 , "T2:");
 
   if (isnan(externalTemperature)) {
-    lcd.print("--.-");
+    printToLcd(10, 1, "--.-");
   } else {
-    lcd.print(externalTemperature , 1);
+    printToLcd(10, 1, String(externalTemperature));
   }
 
   if(ENABLE_ANALOG_SENSOR) {
@@ -716,7 +716,7 @@ void loop() {
 
     // ThingSpeak - Write fields
     int response;
-    if(ENABLE_DEV_MODE || USE_PROD_TEST_SERIAL) {
+    if(ENABLE_DEV_MODE) {
       response = ThingSpeak.writeFields(TS_CHANNEL_NUM_DEV, TS_WRITE_API_KEY_DEV);
     } else {
       response = ThingSpeak.writeFields(TS_CHANNEL_NUM, TS_WRITE_API_KEY);
