@@ -50,8 +50,6 @@ wss.on("connection", async (ws, req) => {
         ws.id = 'error to get device params';
       }
 
-      console.log({lookup})
-
       const clientSerialKey = _.get(ws, 'id');
       const device = await Device.findOne({ deviceSerialKey: clientSerialKey});
       const deviceId =  _.get(device, 'id')
