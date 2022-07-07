@@ -36,7 +36,7 @@ const MenuBar = () => {
       </Logo>
       <MenuList>
         {menuArray.map(({Icon, path, text}) => 
-          <MenuItem exact activeClassName="selectedItem" to={path}>
+          <MenuItem exact activeClassName="selectedItem" to={path} key={text}>
             <Icon />
             {text}
           </MenuItem>

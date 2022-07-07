@@ -26,6 +26,7 @@ const portuguese = {
       selectDeviceLabel: "Dispositivo",
       wateringLabel: "Irrigação",
       autoWateringLabel: "Automático",
+      sensorLabel: "Sensor de umidade",
       editWateringParams: "Editar",
       resetLocalStationLabel: "Reiniciar estação local",
       resetContent1: "A estação local pode demorar por volta de 10 segundos para reiniciar e estabilizar a conexão com a internet",
@@ -40,14 +41,15 @@ const portuguese = {
       lcdBacklightLabel: "LCD",
       lcdBacklightTurnOnLabel: "Luz de fundo",
       defaultDeviceDisclaimer: "O dispositivo selecionado é também o seu dispositivo padrão.",
-      manualTimerLabel: "Manual - Timer"
+      manualTimerLabel: "Manual - Timer",
     },
     history: {
       title: "Histórico",
       manualPumpCategory: "Irrigação manual remota",
       wateringRoutineCategory: "Irrigação automática",
       autoWateringMode: "Configurar irrigação automática",
-      settings: "Configuração"
+      settings: "Configuração",
+      systemReset: "Reinicialização"
     }
 };
 
