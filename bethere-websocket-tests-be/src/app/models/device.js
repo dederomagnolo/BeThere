@@ -33,7 +33,7 @@ const DeviceSchema = new mongoose.Schema({
     type: Boolean,
   },
   addons: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "Addons", require: false },
+    { type: mongoose.Schema.Types.ObjectId, ref: "Addon", require: false },
   ],
 });
 

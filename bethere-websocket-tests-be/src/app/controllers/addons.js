@@ -6,6 +6,7 @@ const Addon = require("../models/addon");
 const Plan = require("../models/plan");
 const User = require("../models/user");
 const router = express.Router();
+const {generateProductKey} = require('../../utils');
 /* router.use(authMiddleWare); */
 
 router.post("/assign", async (req, res) => {
@@ -59,13 +60,16 @@ router.post('/populate' , async(req, res) => {
     });
   }
 
+  const newProductKey = generateProductKey(1);
+
   const newAddon = {
     type,
     characteristics: {
       model,
       range
     },
-    availableForPlans: _.map(plansFromDb, (plan) => plan._id)
+    availableForPlans: _.map(plansFromDb, (plan) => plan._id),
+    productKey: newProductKey
   }
 
   await Addon(newAddon).save();

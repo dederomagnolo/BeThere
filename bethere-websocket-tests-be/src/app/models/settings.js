@@ -53,22 +53,14 @@ const SettingsSchema = new mongoose.Schema({
     },
   },
   moistureSensor: {
-    model: {
-      type: String,
-    },
-    range: {
-      min: {
-        type: Number,
-        default: 1,
-      },
-      max: {
-        type: Number,
-        default: 1024,
-      },
+    enabled: {
+      type: Boolean,
+      required: true,
+      default: false,
     },
     setPoint: {
-      type: Number,
-    },
+      type: Number
+    }
   },
 });
 

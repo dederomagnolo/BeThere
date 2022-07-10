@@ -138,7 +138,7 @@ router.post('/select-default', async(req, res) => {
 
 router.post('/user-devices' , async(req, res) => {
     const { userId } = req.body;
-    const userDevices = await Device.find({userId}).populate("settings");
+    const userDevices = await Device.find({userId}).populate("settings addons")
     return res.send(userDevices);
 });
 

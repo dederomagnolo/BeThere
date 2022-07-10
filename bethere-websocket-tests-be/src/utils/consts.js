@@ -40,7 +40,7 @@ const COMMANDS_BY_VALUE = [
     {
         value: COMMANDS.MANUAL_PUMP.ON,
         name: COMMANDS.MANUAL_PUMP.NAME,
-        needFeedBack: true
+        needFeedBack: false
     },
     {
         value: COMMANDS.WATERING_ROUTINE_MODE.ON,

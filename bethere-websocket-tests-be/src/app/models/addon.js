@@ -29,6 +29,9 @@ const AddonSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  productKey: {
+    type: String
+  }
 });
 
 const Addon = mongoose.model('Addon', AddonSchema);

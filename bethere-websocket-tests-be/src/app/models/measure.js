@@ -9,7 +9,7 @@ const MeasureSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  sentBy: {
+  origin: {
     type: String,
     required: true
   },
@@ -20,9 +20,9 @@ const MeasureSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  },
+  }
 });
 
 const Measure = mongoose.model('Measure', MeasureSchema);
 
-module.exports = Plan;
+module.exports = Measure;

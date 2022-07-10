@@ -10,10 +10,9 @@ function getRandomInt( min, max ) {
     return Math.floor( Math.random() * ( max - min + 1 ) ) + min;
 }
 
-function generateProductKey() {
+function generateProductKey(segments = 4) {
    var tokens = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
        chars = 5,
-       segments = 4,
        keyString = "";
        
    for( var i = 0; i < segments; i++ ) {
