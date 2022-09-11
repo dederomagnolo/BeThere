@@ -14,6 +14,11 @@ export const COMMANDS = {
     ON: "WR_PUMP_ON",
     OFF: "WR_PUMP_OFF",
   },
+  MOISTURE_ROUTINE_MODE: {
+    NAME: "Auto Moisture Mode",
+    ON: "WR_MS_ON",
+    OFF: "WR_MS_OFF",
+  },
   BACKLIGHT: {
     NAME: "Backlight",
     ON: "LCD_ON",

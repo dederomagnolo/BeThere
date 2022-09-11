@@ -20,6 +20,14 @@ const payloadList = {
         categoryName: COMMANDS.WATERING_ROUTINE_MODE.NAME,
         commandName: COMMANDS.WATERING_ROUTINE_MODE.OFF,
     },
+    MOISTURE_AUTO_ON: {
+        categoryName: COMMANDS.MOISTURE_ROUTINE_MODE.NAME,
+        commandName: COMMANDS.MOISTURE_ROUTINE_MODE.ON,
+    },
+    MOISTURE_AUTO_OFF: {
+        categoryName: COMMANDS.MOISTURE_ROUTINE_MODE.NAME,
+        commandName: COMMANDS.MOISTURE_ROUTINE_MODE.OFF,
+    },
     AUTO_PUMP_ON: {
         categoryName: COMMANDS.WATERING_ROUTINE_PUMP.NAME,
         commandName: COMMANDS.WATERING_ROUTINE_PUMP.ON,

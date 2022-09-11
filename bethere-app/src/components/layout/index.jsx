@@ -31,7 +31,7 @@ const Layout = () => {
             <Route exact path="/" component={PageContainer(Dashboard)}/>
             <Route exact path="/charts" component={PageContainer(Charts)} />
             <Route exact path="/settings" component={PageContainer(Settings)}/>
-            <Route exact path="/history" component={History} />
+            <Route exact path="/history" component={PageContainer(History)} />
             <Route exact path="/hello-there" component={Register}/>
           </Switch>
         </Wrapper>

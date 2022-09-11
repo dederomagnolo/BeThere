@@ -29,7 +29,6 @@ export const UserReducer = (
         }
         case "UPDATE_DEVICE_SETTINGS": {
             const selectedDevice = _.get(action.payload, 'selectedDevice');
-            console.log(state.devices);
             const deviceToUpdate = _.findIndex(state.devices, (device) => device._id === selectedDevice);
             return {
                 ...state,

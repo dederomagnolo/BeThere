@@ -184,7 +184,7 @@ const History = () => {
           const commandCategory = _.get(command, "categoryName");
           const createdAt = _.get(command, "createdAt");
           return (
-            <CommandCard>
+            <CommandCard key={createdAt}>
               <div>
                 {moment(createdAt).tz("America/Sao_Paulo").format("HH:mm")}
               </div>

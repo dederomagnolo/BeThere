@@ -36,6 +36,8 @@ const portuguese = {
       wateringEndTimeLabel: "Fim",
       wateringIntervalLabel: "Intervalo para ligar (em minutos)",
       wateringTimerLabel: "Tempo de irrigação (em minutos)",
+      enableMoistureSensorLabel: "Utilizar sensor de umidade",
+      moistureSensorSetPointLabel: "Limite do sensor para ligar",
       wateringSaveChangesButton: "Salvar alterações",
       wateringSaveChangesSuccessLabel: "Sucesso!",
       lcdBacklightLabel: "LCD",

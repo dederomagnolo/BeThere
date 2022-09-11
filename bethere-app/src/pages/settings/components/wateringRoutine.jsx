@@ -23,34 +23,42 @@ for (let i = 0; i < 24; i++) {
 
 const WateringRoutineOptions = ({
   handleEditRoutine,
-  wateringRoutineSettings,
   selectedDeviceSettings,
-  deviceId
+  deviceId,
+  routinePayload,
+  setRoutinePayload,
+  selectedDevice,
+  sendCommand,
+  userId
 }) => {
   const [editSuccess, setEditSuccess] = useState(null);
   const translate = useTranslate("settings");
-  const [moistureAutomationEnabled, setMoistureAutomationEnabled] = useState(false);
+  const wateringRoutineSettings = _.get(selectedDeviceSettings, "wateringRoutine");
   const wateringRoutineEnabled = _.get(wateringRoutineSettings, "enabled");
-  const [routinePayload, setRoutinePayload] = useState({
-    enabled: wateringRoutineEnabled,
-    startTime: _.get(wateringRoutineSettings, "startTime"),
-    endTime: _.get(wateringRoutineSettings, "endTime"),
-    interval: _.get(wateringRoutineSettings, "interval"),
-    duration: _.get(wateringRoutineSettings, "duration"),
-  });
+  const selectedDeviceAddons = _.get(selectedDevice, "addons");
+  const [showMoistureOptions, setShowMoistureOptions] = useState(_.get(selectedDeviceSettings, "moistureSensor.enabled"));
+  const isMoistureSensor = _.find(selectedDeviceAddons, (addon) => {
+    return addon && addon.characteristics && addon.characteristics.model === 'HD38'
+  })
 
   const findTimeDefaultOption = (value) => {
     return _.find(timeOptions, (option) => option.value === value);
   };
 
-  useEffect(() => {
-    const routineSettings = _.get(selectedDeviceSettings, "wateringRoutine");
-    setRoutinePayload({ ...routineSettings });
-  }, [deviceId])
+  const handleMoistureAutomation = async () => {
+    await sendCommand("MOISTURE_AUTO_ON", userId, deviceId);
+    setShowMoistureOptions(!showMoistureOptions);
+    await handleEditRoutine({
+      wateringRoutineEnabledState: !wateringRoutineEnabled,
+      routinePayload,
+      successCallback: setEditSuccess,
+      editAutoMoisture: true
+    })
+  }
 
   return(
     <WateringParametersContainer>
-      <SubOption>
+      {!showMoistureOptions && <SubOption>
         <SubOptionLabel>
           {translate("wateringStartTimeLabel")}:
         </SubOptionLabel>
@@ -95,8 +103,8 @@ const WateringRoutineOptions = ({
           menuPortalTarget={document.querySelector("body")}
           options={timeOptions}
         />
-      </SubOption>
-      <SubOption>
+      </SubOption>}
+      {!showMoistureOptions && <SubOption>
         <SubOptionLabel>
           {translate("wateringIntervalLabel")}:
         </SubOptionLabel>
@@ -113,8 +121,8 @@ const WateringRoutineOptions = ({
           min={0}
           max={40}
         />
-      </SubOption>
-      <SubOption>
+      </SubOption>}
+      {!showMoistureOptions && <SubOption>
         <SubOptionLabel>
           {translate("wateringTimerLabel")}:
         </SubOptionLabel>
@@ -131,41 +139,50 @@ const WateringRoutineOptions = ({
           min={0}
           max={200}
         />
-      </SubOption>
-      <SubOption>
-        <SubOptionLabel>
-          Utilizar sensor de umidadde
-        </SubOptionLabel>
-        <Toggle
-          checked={moistureAutomationEnabled}
-          onChange={() => {
-            setMoistureAutomationEnabled(!moistureAutomationEnabled)
-          }} 
-        />
-      </SubOption>
-      <SubOption>
-        {moistureAutomationEnabled && (
+      </SubOption>}
+      {isMoistureSensor && (
+        <SubOption>
+          <SubOptionLabel>
+            {translate("enableMoistureSensorLabel")}
+          </SubOptionLabel>
+          <Toggle
+            backgroundColorChecked="#3bea64"
+            checked={showMoistureOptions}
+            onChange={() => handleMoistureAutomation()} 
+          />
+        </SubOption>
+      )}
+      {showMoistureOptions && (
+        <SubOption>
+          <SubOptionLabel>
+            {translate("moistureSensorSetPointLabel")}:
+          </SubOptionLabel>
           <Input
             onChange={(e) =>
               setRoutinePayload({
                 ...routinePayload,
-                duration: e.target.value,
+                moistureSensorSetPoint: e.target.value,
               })
             }
-            value={routinePayload.duration}
+            value={routinePayload.moistureSensorSetPoint}
             placeholder={"minutes"}
             type="number"
             min={0}
-            max={200}
+            max={1024}
           />
-        )}
-      </SubOption>
+        </SubOption>
+      )}
       <SuccessButtonContainer>
         <SuccessButton
           success={editSuccess}
           callBack={setEditSuccess}
           onClick={() =>
-            handleEditRoutine(!wateringRoutineEnabled, true)
+            handleEditRoutine({
+              wateringRoutineEnabledState: !wateringRoutineEnabled,
+              editFromButton: true,
+              routinePayload,
+              successCallback: setEditSuccess
+            })
           }
           buttonLabel={translate("wateringSaveChangesButton")}
           successLabel={translate(

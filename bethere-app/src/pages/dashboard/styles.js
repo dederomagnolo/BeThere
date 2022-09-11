@@ -13,7 +13,6 @@ export const Cards = styled.div`
 `
 
 export const MainContainer = styled.div`
-    padding-left: 15px;
     height: 100%;
 `
 

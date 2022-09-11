@@ -411,17 +411,17 @@ export const Dashboard = () => {
           ></NewCard>
         </Cards>
         {/* <Cards>
-                    <NewCard 
-                            label={"CO2 (ppm)"} 
-                            icon={"asterisk"} 
-                            internalMeasure={measures.internalHumidity} 
-                            externalMeasure={measures.externalHumidity} 
-                            onClick={() => {
-                                setShowHumidityChart(true)
-                                setShowTemperatureChart(false);
-                            }}
-                    />
-                </Cards> */}
+          <NewCard 
+                  label={"CO2 (ppm)"} 
+                  icon={"asterisk"} 
+                  internalMeasure={measures.internalHumidity} 
+                  externalMeasure={measures.externalHumidity} 
+                  onClick={() => {
+                      setShowHumidityChart(true)
+                      setShowTemperatureChart(false);
+                  }}
+          />
+      </Cards> */}
         <DateContainer>
           <LeftArrow fill="#1491a869" size={20} onClick={goToPreviousDay} />
           <DayPickerInput
