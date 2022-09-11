@@ -1,5 +1,6 @@
 const express = require("express");
 const authMiddleWare = require("../middlewares/auth");
+const _ = require("lodash");
 
 const User = require("../models/user");
 const Device = require("../models/device");
@@ -70,15 +71,16 @@ router.post("/edit", async (req, res) => {
     } = req.body;
 
     const { duration, interval, startTime, endTime, enabled } = wateringRoutine;
-
-    const { setPoint } = moistureSensor;
+    const setPoint = _.get(moistureSensor, 'setPoint');
+    const moistureAutomationEnabled = _.get(moistureSensor, 'enabled');
+    const currentSettings = await Settings.findOne({ _id: settingsId });
 
     const dataToUpdate = {
-      settingsName,
-      backlight,
-      pumpTimer,
-      localMeasureInterval,
-      remoteMeasureInterval,
+      settingsName: settingsName || currentSettings.settingsName,
+      backlight: backlight || currentSettings.backlight,
+      pumpTimer: pumpTimer || currentSettings.pumpTimer,
+      localMeasureInterval: localMeasureInterval || currentSettings.localMeasureInterval,
+      remoteMeasureInterval: remoteMeasureInterval || currentSettings.remoteMeasureInterval,
       wateringRoutine: {
         enabled,
         duration,
@@ -87,7 +89,8 @@ router.post("/edit", async (req, res) => {
         endTime,
       },
       moistureSensor: {
-        setPoint,
+        enabled: moistureAutomationEnabled,
+        setPoint: setPoint || currentSettings.moistureSensor.setPoint,
       },
     };
 

@@ -15,8 +15,9 @@ const Command = require("./app/models/command");
 const Device = require("./app/models/device");
 const Settings = require("./app/models/settings");
 const User = require("./app/models/user");
+const Measure = require("./app/models/measure");
 const { minutesToMilliseconds, secondsToMilliseconds } = require("./utils");
-const sendCommandWhenClientSendFeedback = require("./utils/functions");
+const writeCommandToDb = require("./utils/functions");
 
 const app = express();
 app.use(express.json());
@@ -68,7 +69,7 @@ wss.on("connection", async (ws, req) => {
         const { enabled, startTime, endTime, interval, duration } =
           wateringRoutine;
 
-        const { setPoint } = moistureSensor;
+        const setPoint = _.get(moistureSensor, 'setPoint')
   
         if (enabled) {
           ws.send("WR_ON");
@@ -88,8 +89,17 @@ wss.on("connection", async (ws, req) => {
       }
     }
 
-    if (message === "BeThere Home is alive!") {
-      ws.id = `bethere_home_${ws.id}`;
+    if (message.includes("WRITE_MEASURE")) {
+      const clientSerialKey = _.get(ws, 'id');
+      const splitMessage = message.split("$");
+      const parsedMeasure = JSON.parse(splitMessage[1]);
+      const device = await Device.findOne({ deviceSerialKey: clientSerialKey });
+      const deviceId =  _.get(device, 'id');
+
+      await Measure.create({
+        deviceId,
+        ...parsedMeasure
+      });
     }
 
     console.log(
@@ -98,13 +108,13 @@ wss.on("connection", async (ws, req) => {
         .format("HH:mm")} => ${message}`
     );
 
-    // save last command to update bd if the client sends a different feedback message
+    // save last command to update bd if the client sends a different message and it is not only a feedback
     const isFeedbackMessage = message.includes("feedback#");
     const deviceIdFromSerial = await Device.findOne({ deviceSerialKey: ws.id });
     const userIdFromDevice = _.get(deviceIdFromSerial, "userId");
 
     if (lastCommand && lastCommand !== message && !isFeedbackMessage) {
-      sendCommandWhenClientSendFeedback({
+      writeCommandToDb({
         commandFromRemote: message,
         userId: userIdFromDevice,
         deviceId: _.get(deviceIdFromSerial, "_id"),

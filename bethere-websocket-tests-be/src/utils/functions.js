@@ -2,7 +2,7 @@ const Command = require('../app/models/command');
 const {COMMANDS_BY_VALUE} = require('./consts');
 const _ = require('lodash');
 
-const sendCommandWhenClientSendFeedback = async ({
+const writeCommandToDb = async ({
     commandFromRemote, 
     deviceSerialKey,
     userId,
@@ -24,4 +24,4 @@ const sendCommandWhenClientSendFeedback = async ({
     }
 }
 
-module.exports = sendCommandWhenClientSendFeedback;
+module.exports = writeCommandToDb;
