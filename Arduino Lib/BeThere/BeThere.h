@@ -5,7 +5,8 @@
 
 enum SERIAL_KEY_PROD_SHORT { 
     D_35U2I,
-    D_M5YZ5 
+    D_M5YZ5,
+    D_P0HAM, 
 };
 
 class BeThere {
