@@ -1,6 +1,5 @@
 #include <Adafruit_Sensor.h>
 #include <ArduinoJson.h>
-#include <DHT.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <Wire.h>
@@ -14,20 +13,13 @@
 
 // #### DEVICE TO DEPLOY ####
 // #define SHORT_SERIAL_KEY D_35U2I
-#define SHORT_SERIAL_KEY D_M5YZ5
-
-// #### COMMANDS ####
-#define RELAY1_ON "MP1"
-#define RELAY1_OFF "MP0"
-#define RESET_ESP "RESET_ESP"
-#define DISCONNECTED "DISCONNECTED"
-#define CONNECTED "CONNECTED"
-#define SETTINGS "SETTINGS"
+//#define SHORT_SERIAL_KEY D_M5YZ5
+#define SHORT_SERIAL_KEY D_P0HAM
 
 // #### STATIC CONFIGS ####
-#define USE_LOCAL_NETWORK true
-#define USE_LOCAL_HOST false
-#define ENABLE_DEV_MODE true
+#define USE_LOCAL_NETWORK false
+#define USE_LOCAL_HOST true
+#define ENABLE_DEV_MODE false
 #define ENABLE_ACCESS_POINT false
 #define ENABLE_DEBUGGER_LOGS true
 #define RECONNECTION_RETRIES 8
@@ -35,14 +27,15 @@
 // #### DHT PINS ####
 // #define DHT_PIN 12 // d6
 // #define DHT2_PIN 13 // d7
-#define DHT3_PIN 14 // d5
-#define DHT_TYPE DHT22
+// #define DHT3_PIN 14 // d5
+// #define DHT_TYPE DHT22
 
 // #### CONFIGS FROM SERIAL - DEFAULT VALUES ####
 bool ENABLE_LCD = true;
 bool ENABLE_RELAY_LOW = false;
 bool ENABLE_RELAY_PUSH_BUTTON = false;
 bool ENABLE_ANALOG_SENSOR = false;
+char ANALOG_SENSOR_KEY[5] = {" "};
 int RELAY_PIN = 13; // d7
 int PUSH_BUTTON_PIN = 10;
 int ANALOG_PIN = A0;
@@ -52,9 +45,11 @@ using namespace websockets;
 WiFiClient client;
 WebsocketsClient wsclient;
 BeThere BeThere;
-// DFRobot_SHT20 sht20;
+DFRobot_SHT20 sht20External;
+DFRobot_SHT20 sht20Internal;
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 StaticJsonDocument<200> doc;
+DynamicJsonDocument measures(1024);
 
 // #### KEYS ####
 // Device serial key - DEV
@@ -72,14 +67,14 @@ unsigned long TS_CHANNEL_NUM = TS_CHANNEL_NUM_DEV;
 char * TS_WRITE_API_KEY = TS_WRITE_API_KEY_DEV;
 
 // WiFi Credentials - PROD DEFAULT
-char SSID_PROD[] = {"Romagnolo 2.4G"};
-char SSID_PASSWORD_PROD[] = {"melzinha123"};
+char SSID_PROD[] = {"Sabatin"};
+char SSID_PASSWORD_PROD[] = {"feliciano10"};
 
 // WiFi Credentials - DEV
-//char SSID_DEV[] = "Romagnolo 2.4G";
-//char SSID_PASSWORD_DEV[] = "melzinha123";
-char SSID_DEV[] = "Satan`s Connection";
-char SSID_PASSWORD_DEV[] = "tininha157";
+char SSID_DEV[] = "Sabatin";
+char SSID_PASSWORD_DEV[] = "feliciano10";
+//char SSID_DEV[] = "Satan`s Connection";
+//char SSID_PASSWORD_DEV[] = "tininha157";
 
 // #### TIMERS ####
 unsigned long beginSendMeasureTimer = 0;
@@ -124,6 +119,7 @@ int websocketReconnectionRetries = 0;
 bool withoutUserWiFiConfig; // flag to track auto ESP connection. without config means the user should configure the network
 bool settingsTriggered = false;
 bool wateringRoutineMode = false;
+bool moistureAutoMode = false;
 bool manualRelayAction = false;
 bool autoRelayAction = false;
 bool buttonLastState = false;
@@ -136,7 +132,7 @@ int hours;
 int minutes;
 
 // #### DHT PINS ####
-DHT dht(DHT3_PIN, DHT_TYPE);
+// DHT dht(DHT3_PIN, DHT_TYPE);
 // DHT dht2(DHT2_PIN, DHT_TYPE);
 // DHT dht3(DHT_PIN, DHT_TYPE);
 
@@ -187,6 +183,8 @@ void printConfigs() {
   Serial.println("PUSH_BUTTON_PIN: " + String(PUSH_BUTTON_PIN));
   Serial.println("TS_CHANNEL_NUM: " + String(TS_CHANNEL_NUM));
   Serial.println("TS_WRITE_API_KEY: " + String(TS_WRITE_API_KEY));
+  Serial.println("ENABLE_ANALOG_SENSOR: " + String(ENABLE_ANALOG_SENSOR));
+  Serial.println("ANALOG_SENSOR_KEY: " + String(ANALOG_SENSOR_KEY));
   Serial.println("####################################");
 }
 
@@ -205,11 +203,14 @@ void setConfig() {
     Serial.println(error.f_str());
     return;
   }
-
+  
   // assign values from json to global variables
   ENABLE_RELAY_LOW = doc["ENABLE_RELAY_LOW"];
   ENABLE_RELAY_PUSH_BUTTON = doc["ENABLE_RELAY_PUSH_BUTTON"];
   ENABLE_ANALOG_SENSOR = doc["ENABLE_ANALOG_SENSOR"];
+  if(ENABLE_ANALOG_SENSOR) {
+    strcpy(ANALOG_SENSOR_KEY, doc["ANALOG_SENSOR_KEY"]);
+  }
   ENABLE_LCD = doc["ENABLE_LCD"];
   RELAY_PIN = doc["RELAY_PIN"];
   if(ENABLE_RELAY_PUSH_BUTTON) {
@@ -219,7 +220,9 @@ void setConfig() {
   strcpy(TS_WRITE_API_KEY, doc["TS_WRITE_API_KEY"]);
   strcpy(SSID_PROD, doc["SSID"]);
   strcpy(SSID_PASSWORD_PROD, doc["PASSWORD"]);
-  strcpy(SERIAL_KEY_PROD, doc["SERIAL_KEY_PROD"]);
+  if(!ENABLE_DEV_MODE) {
+    strcpy(SERIAL_KEY_PROD, doc["SERIAL_KEY_PROD"]);
+  }
 
   // print configured settings
   printConfigs();
@@ -258,11 +261,13 @@ void handleWithoutWiFiConfig() {
 // WiFi Initialization
 // can receive custom credentials if needs to call function as a callback
 void initWifi(String ssid = "noop", String password = "noop") {
+  Serial.println(ssid);
+  Serial.println(password);
   if(ENABLE_ACCESS_POINT) {
     WiFi.begin(ssid, password);
   } else {
     WiFi.mode(WIFI_STA);
-    ENABLE_DEV_MODE || USE_LOCAL_NETWORK
+     ENABLE_DEV_MODE || USE_LOCAL_NETWORK
       ? WiFi.begin(SSID_DEV, SSID_PASSWORD_DEV) 
       : WiFi.begin(SSID_PROD, SSID_PASSWORD_PROD);
   }
@@ -403,10 +408,26 @@ void resetRelayState() {
 
 void startManualRelayAction() {
   writeRelayState(LOW);
-  wsclient.send("MP1");
+  wsclient.send("MP1"); // TODO: need to add MP1#feedback here to differ from button and change constant in the BE
   beginRelayTimer = millis();
   manualRelayAction = true;
   Serial.println("start manual relay");
+}
+
+void stopAutoRelayAction() {
+  writeRelayState(HIGH);
+  wsclient.send("WR_PUMP_OFF");
+  beginRelayTimer = 0;
+  beginWateringRoutineTimer = millis(); // reset watering timer for each cycle
+  autoRelayAction = false;
+}
+
+void startAutoRelayAction() {
+  autoRelayAction = true;
+  wsclient.send("WR_PUMP_ON");
+  writeRelayState(LOW);
+  beginRelayTimer = millis(); // start pump timer
+  beginWateringRoutineTimer = millis(); //reset timer after  a cicle
 }
 
 void handleApplyCommand (String message) {
@@ -440,6 +461,14 @@ void handleApplyCommand (String message) {
       wsclient.send("feedback#WR_ON");
       beginWateringRoutineTimer = millis();
     }
+  }
+
+  if(message == "WR_MS_ON") {
+    moistureAutoMode = true;
+  }
+
+  if(message == "WR_MS_OFF") {
+    moistureAutoMode = false;
   }
 
   if (message == "WR_OFF") {
@@ -500,6 +529,36 @@ void handleWebsocketConnection () {
   }
 }
 
+// #### THINGSPEAK ####
+void sendFieldsToThingSpeak(
+  float internalHumidity,
+  float internalTemperature,
+  float externalHumidity,
+  float externalTemperature
+){
+  // ThingSpeak - Set fields
+  ThingSpeak.setField(3, internalHumidity);
+  ThingSpeak.setField(4, internalTemperature);
+  ThingSpeak.setField(5, externalHumidity);
+  ThingSpeak.setField(6, externalTemperature);
+
+  // ThingSpeak - Write fields
+  int response;
+  if(ENABLE_DEV_MODE) {
+    response = ThingSpeak.writeFields(TS_CHANNEL_NUM_DEV, TS_WRITE_API_KEY_DEV);
+  } else {
+    response = ThingSpeak.writeFields(TS_CHANNEL_NUM, TS_WRITE_API_KEY);
+  }
+  client.flush();
+  // Check status response
+  if (response == 200) {
+    Serial.println("Data sent with success!");
+    beginSendMeasureTimer = millis();
+  } else {
+    Serial.println("Coneection Error: " + String(response));
+  }
+}
+
 void setup() {
   // Begin serial
   Serial.begin(115200);
@@ -531,7 +590,7 @@ void setup() {
   }
 
   // begin DHT sensors
-  dht.begin();
+  // dht.begin();
   // dht2.begin();
 
   // websocket events
@@ -566,7 +625,7 @@ void setup() {
       settingsTriggered = false;
       // to check received settings
       Serial.println("######################");
-      for (int i = 0; i < 8; i++)
+      for (int i = 0; i < 9; i++)
       {
         Serial.println(settings[i]);
       }
@@ -587,26 +646,37 @@ void setup() {
   
   // initial state - relay
   pinMode(RELAY_PIN, OUTPUT);
-  writeRelayState(HIGH); // relay off
+  writeRelayState(HIGH); // default logics - relay off if the state is HIGH
 
   if(ENABLE_RELAY_PUSH_BUTTON) {
-    pinMode(PUSH_BUTTON_PIN, INPUT_PULLUP);
-    // writeRelayState(LOW); 
+    pinMode(PUSH_BUTTON_PIN, INPUT_PULLUP); 
   }
-  // Init SHT20 Sensor
-//  sht20.initSHT20(); 
-//  delay(100);
-//  sht20.checkSHT20();
+
+  if(!ENABLE_ANALOG_SENSOR) {
+    // Init SHT20 Sensor
+    sht20External.initSHT20(); 
+    delay(100);
+    sht20External.checkSHT20();
+    delay(100);
+    sht20Internal.initSHT20(); 
+    delay(100);
+    sht20Internal.checkSHT20();
+  }
 
   ThingSpeak.begin(client);
 
   // initialize LCD
-  lcd.begin(16, 2);
-  lcd.init();
-  lcd.backlight();
-  printToLcd(0,0,"BeThere started");
-  delay(1000);
-  clearLcd();
+  if(ENABLE_LCD) {
+    lcd.begin(16, 2);
+    lcd.init();
+    lcd.backlight();
+    printToLcd(0,0,"BeThere started");
+    delay(1000);
+    clearLcd();
+  }
+
+  // begin measure timer
+  beginSendMeasureTimer = millis();
 }
 
 void loop() {
@@ -633,7 +703,7 @@ void loop() {
   // when watering routine mode is active, need to check if the time matches to run the logics
   if (wateringRoutineMode) {
     // Check time configured in settings and start watering routine
-    if (hours >= settings[4] && hours < settings[5]) {
+    if (!moistureAutoMode && hours >= settings[4] && hours < settings[5]) {
       Serial.print("Time to set auto:");
       Serial.print(millis() - beginWateringRoutineTimer);
       Serial.print(" min:");
@@ -642,11 +712,7 @@ void loop() {
       // only enter below once - when the relay is not up
       if ((millis() - beginWateringRoutineTimer > settings[7]) && beginRelayTimer == 0) { // check if the interval has passed;
         Serial.println("Auto watering activated");
-        autoRelayAction = true;
-        wsclient.send("WR_PUMP_ON");
-        writeRelayState(LOW);
-        beginRelayTimer = millis(); // start pump timer
-        beginWateringRoutineTimer = millis(); //reset timer after  a cicle
+        startAutoRelayAction();
       }
     }
 
@@ -654,82 +720,88 @@ void loop() {
     if(!manualRelayAction && autoRelayAction) {
       // check if the time has passed using the settings to finish work and write states
       if (millis() - beginRelayTimer > settings[6]) {
-        writeRelayState(HIGH);
-        wsclient.send("WR_PUMP_OFF");
-        beginRelayTimer = 0;
-        beginWateringRoutineTimer = millis(); // reset watering timer for each cycle
-        autoRelayAction = false;
+        stopAutoRelayAction();
         Serial.println("Auto Watering - Pump finished the work!");
+      }
+    }
+
+    if(!manualRelayAction && moistureAutoMode) {
+      int sensorValue = analogRead(ANALOG_PIN);
+
+      if(!autoRelayAction && (settings[8] > sensorValue)) {
+        startAutoRelayAction();
+      } else {
+        // stop moisture routine
       }
     }
   }
 
 //  float internalHumidity = dht2.readHumidity();
 //  float internalTemperature = dht2.readTemperature();
+//  float externalHumidity = dht.readHumidity();
+//  float externalTemperature = dht.readTemperature();
 
-  float externalHumidity = dht.readHumidity();
-  float externalTemperature = dht.readTemperature();
-
-  printToLcd(0, 0, "H:");
-
-  if (isnan(internalHumidity)) {
-    printToLcd(2, 0, "--.-");
-  } else {
-    printToLcd(2, 0, String(internalHumidity));
-    printToLcd(6, 0, " ");
-  }
+  if(!ENABLE_ANALOG_SENSOR) {
+    float internalHumidity = sht20Internal.readHumidity();
+    float internalTemperature = sht20Internal.readTemperature();
+    float externalHumidity = sht20External.readHumidity();
+    float externalTemperature = sht20External.readTemperature();
   
-  printToLcd(0, 1, "T:");
-
-  if (isnan(internalTemperature)) {
-    printToLcd(2, 1, "--.-");
-  } else {
-    printToLcd(2, 1, String(internalTemperature));
-  }
-  printToLcd(7, 0 , "H2:");
-
-  if (isnan(externalHumidity)) {
-    printToLcd(10, 0, "--.-");
-  } else {
-    printToLcd(10, 0, String(externalHumidity));
-  }
+    printToLcd(0, 0, "H:");
   
-  printToLcd(7, 1 , "T2:");
-
-  if (isnan(externalTemperature)) {
-    printToLcd(10, 1, "--.-");
-  } else {
-    printToLcd(10, 1, String(externalTemperature));
-  }
-
-  if(ENABLE_ANALOG_SENSOR) {
-    int sensorValue = analogRead(ANALOG_PIN);
-  }
-  
-  if (millis() - beginSendMeasureTimer > settings[3]) {
-    Serial.println("Sending data...");
-    // ThingSpeak - Set fields
-    ThingSpeak.setField(3, internalHumidity);
-    ThingSpeak.setField(4, internalTemperature);
-    ThingSpeak.setField(5, externalHumidity);
-    ThingSpeak.setField(6, externalTemperature);
-
-    // ThingSpeak - Write fields
-    int response;
-    if(ENABLE_DEV_MODE) {
-      response = ThingSpeak.writeFields(TS_CHANNEL_NUM_DEV, TS_WRITE_API_KEY_DEV);
+    if (isnan(internalHumidity)) {
+      printToLcd(2, 0, "--.-");
     } else {
-      response = ThingSpeak.writeFields(TS_CHANNEL_NUM, TS_WRITE_API_KEY);
+      printToLcd(2, 0, String(internalHumidity));
+      printToLcd(6, 0, " ");
     }
-    client.flush();
-    // Check status response
-    if (response == 200) {
-      Serial.println("Data sent with success!");
+    
+    printToLcd(0, 1, "T:");
+  
+    if (isnan(internalTemperature)) {
+      printToLcd(2, 1, "--.-");
+    } else {
+      printToLcd(2, 1, String(internalTemperature));
+    }
+    printToLcd(7, 0 , "H2:");
+  
+    if (isnan(externalHumidity)) {
+      printToLcd(10, 0, "--.-");
+    } else {
+      printToLcd(10, 0, String(externalHumidity));
+    }
+    
+    printToLcd(7, 1 , "T2:");
+  
+    if (isnan(externalTemperature)) {
+      printToLcd(10, 1, "--.-");
+    } else {
+      printToLcd(10, 1, String(externalTemperature));
+    }
+    if (millis() - beginSendMeasureTimer > settings[3]) {
+      sendFieldsToThingSpeak(
+        internalHumidity,
+        internalTemperature,
+        externalHumidity,
+        externalTemperature
+      );
+    }
+  } else {
+    if (millis() - beginSendMeasureTimer > settings[3]) {
+      Serial.println("Sending data...");
+      int sensorValue = analogRead(ANALOG_PIN);
+      measures["value"] = sensorValue;
+      measures["origin"] = ANALOG_SENSOR_KEY;
+      measures["measureName"] = "moisture";
+      String serializedDoc;
+      serializeJson(measures, serializedDoc);
+      String measureAndInfoJson = String("WRITE_MEASURE$") + serializedDoc;
+
       beginSendMeasureTimer = millis();
-    } else {
-      Serial.println("Coneection Error: " + String(response));
+      wsclient.send(measureAndInfoJson);
     }
   }
+  
 
   if(sendStatusToServer) {
     String statusString = "";
@@ -756,6 +828,5 @@ void loop() {
       }
     }
     buttonLastState = buttonState;
-    delay(100);
   }
 }
